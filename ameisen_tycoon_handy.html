@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#120c07"><meta name="format-detection" content="telephone=no">
-<script id="apkUpd0">(function(){var OWN=105;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
+<script id="apkUpd0">(function(){var OWN=106;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
 try{var v=R.ver();if(v>OWN){var n=+(localStorage.getItem('at_ub')||0);if(n>=3){R.clear();localStorage.setItem('at_ub','0');}
 else{localStorage.setItem('at_ub',String(n+1));R.boot();window.stop();}}else if(v&&v<OWN)R.clear();}catch(e){}})();</script>
 <title>Ameisen-Simulator</title>
@@ -224,7 +224,7 @@ const WALD = CHAPTER === "wald", ARMY = CHAPTER === "schwarm", REGEN = CHAPTER =
 // =====================================================================
 //  Ameisen-Tycoon – 2,5D-Querschnitt durch den Ameisenbau
 // =====================================================================
-const VERSION = "v1.05";
+const VERSION = "v1.06";
 const UPDATES = [
   ["v0.1", "Prototyp: eine Ameise sucht Futter an der Oberfläche."],
   ["v0.2", "Blick in den Bau: Königin, Eier, Larven, Puppen und Arbeiterinnen. Musik und Höhlen-Geräusche."],
@@ -332,6 +332,7 @@ const UPDATES = [
   ["v1.03", "Schneller auf schwächeren Rechnern: Die Erdschichten mit ihrer Körnung werden nicht mehr in jedem Bild neu zusammengesetzt, sondern nur, wenn sich die Ansicht oder die Gänge ändern. Neu ist eine Leistungsautomatik: Ruckelt das Bild, senkt das Spiel unauffällig Auflösung und Detailmenge in bis zu drei Stufen – läuft es wieder flüssig, wird die volle Qualität zurückgeholt."],
   ["v1.04", "Keine Aussetzer mehr im Wald: Bei jedem Licht- oder Wetterwechsel (z. B. in der Dämmerung oder wenn Regen einsetzt) wurde der ganze Waldhintergrund neu gezeichnet – das dauerte bis zu einer Sekunde. Jetzt werden die Bäume nur einmal je Jahreszeit vorgezeichnet, verteilt über viele Bilder, und Licht und Dunst werden blitzschnell als Farbschichten darübergelegt."],
   ["v1.05", "Die schöne Grafik bleibt: Das Spiel senkt die Qualität nicht mehr von selbst. Im Menü gibt es jetzt „🖥️ Grafik“ mit Hoch (Standard), Auto (nimmt bei dauerhaftem Ruckeln nur die teuren Lichteffekte weg, die Auflösung bleibt) und Sparsam (für schwache Rechner). Neu ist außerdem „📊 Leistung anzeigen“: Es zeigt Bilder pro Sekunde und den größten Hänger der letzten 10 Sekunden – und ob die Zeit im Spiel selbst oder beim Browser/der Grafik verloren ging."],
+  ["v1.06", "Weniger Grafikspeicher im Wald: Der Wald brauchte fast doppelt so viel Grafikspeicher wie die Wiese – auf Laptops mit eingebauter Grafik führte das zu Hängern von über einer Sekunde. Die drei Waldebenen liegen jetzt nur noch einmal im Speicher (eingefärbt wird beim Zusammensetzen), und die Erd-Vorlage für frisch gegrabene Gänge ist auf halbe Auflösung verkleinert. Außerdem legt der wachsende Nadelhügel nicht mehr bei jedem Wachstumsschritt eine neue Zeichenfläche an. Zusammen rund 64 MB weniger – an der sichtbaren Grafik ändert sich nichts."],
 ];
 const SAVE_KEY = SK("ameisen-tycoon-save-v4" + (WALD ? "-wald" : ARMY ? "-schwarm" : REGEN ? "-regen" : ""));
 
@@ -524,6 +525,9 @@ fg.drawImage(earth, WX0, 0, WW, DEPTH);
 const [frontS, fsg] = mk();
 const [inner, ig] = mk();
 ig.drawImage(earth, WX0, 0, WW, DEPTH);
+const EARTH_K = 0.5;                                                                             // Vorlage zum Graben: halbe Auflösung spart Grafikspeicher
+{ const h = document.createElement("canvas"); h.width = Math.ceil(earth.width * EARTH_K); h.height = Math.ceil(earth.height * EARTH_K); h.getContext("2d").drawImage(earth, 0, 0, h.width, h.height);
+  earth.width = h.width; earth.height = h.height; earth.getContext("2d").drawImage(h, 0, 0); h.width = h.height = 0; }
 ig.fillStyle = "rgba(22,12,5,.42)"; ig.fillRect(WX0, 0, WW, DEPTH);
 
 let SOILV = 0;                                                                                   // ändert sich, sobald irgendwo gegraben wird
@@ -539,7 +543,7 @@ function carve(path, bx, by, bw, bh, shadow = true) {
   ig.save(); ig.translate(D.x, D.y); ig.clip(path); ig.translate(-D.x, -D.y);
   const x0 = Math.max(WX0, bx + D.x - 4), y0 = Math.max(0, by + D.y - 4), w0 = Math.min(W - x0, bw + 8), h0 = Math.min(DEPTH - y0, bh + 8);
   if (w0 > 0 && h0 > 0) {
-    ig.drawImage(earth, (x0 - WX0) * RES, y0 * RES, w0 * RES, h0 * RES, x0, y0, w0, h0);
+    ig.drawImage(earth, (x0 - WX0) * RES * EARTH_K, y0 * RES * EARTH_K, w0 * RES * EARTH_K, h0 * RES * EARTH_K, x0, y0, w0, h0);
     ig.fillStyle = "rgba(14,7,2,.58)"; ig.fillRect(x0, y0, w0, h0);
   }
   ig.restore();
@@ -7770,28 +7774,6 @@ function woodRun(J, budget) {                                                   
 function buildWoodLayer(ly, li, fc, si, snowK) {                                                // vollständig auf einmal (nur beim allerersten Mal)
   ly.base ||= document.createElement("canvas"); woodRun(woodJob(ly, li, si, snowK, ly.base), 0);
 }
-function tintWoodStep(ly, J, budget) {                                                          // Einfärben in senkrechten Streifen – höchstens ein paar Millisekunden pro Bild
-  const b = ly.base, c = ly.cache, g = c.getContext("2d"), t0 = performance.now(), SW = 640;
-  g.setTransform(1, 0, 0, 1, 0, 0);
-  while (J.x < c.width) {
-    const x = J.x, w = Math.min(SW, c.width - x);
-    g.clearRect(x, 0, w, c.height); g.drawImage(b, x, 0, w, c.height, x, 0, w, c.height);
-    g.globalCompositeOperation = "source-atop"; g.fillStyle = `rgba(12,16,14,${(1 - J.L) * 0.8})`; g.fillRect(x, 0, w, c.height);
-    g.fillStyle = rgb(J.hz, 1, ly.haze); g.fillRect(x, 0, w, c.height); g.globalCompositeOperation = "source-over";
-    J.x += w; break;                                                                             // genau ein Streifen pro Bild: die Grafikkarte kommt hinterher, ohne zu stocken
-  }
-  return J.x >= c.width;
-}
-function tintWoodLayer(ly, L, hz) {                                                              // Dämmerung und Dunst als Farbschichten: rechnerisch gleich wie das Einfärben jeder einzelnen Farbe
-  const b = ly.base, c = ly.cache ||= document.createElement("canvas");
-  if (c.width !== b.width || c.height !== b.height) { c.width = b.width; c.height = b.height; }
-  const g = c.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0);
-  g.globalCompositeOperation = "copy"; g.drawImage(b, 0, 0);
-  g.globalCompositeOperation = "source-atop";
-  g.fillStyle = `rgba(12,16,14,${(1 - L) * 0.8})`; g.fillRect(0, 0, c.width, c.height);
-  g.fillStyle = rgb(hz, 1, ly.haze); g.fillRect(0, 0, c.width, c.height);
-  g.globalCompositeOperation = "source-over";
-}
 // ---------- einzelne Waldbäume: jede Art mit eigener Gestalt, jeder Baum mit eigenem Charakter ----------
 function drawWoodTree(g, t, li, fc, si, snowK, sea) {
   const r = mulberry32((t.seed * 1e6) | 0), x = t.x, bot = t.bot, w = t.w, top = -1300;
@@ -7868,12 +7850,13 @@ function drawWoodTree(g, t, li, fc, si, snowK, sea) {
 }
 const CANOPY_GAPS = (() => { const r = mulberry32(8181), out = []; for (let x = -2400; x < 4600; x += 260 + r() * 220) out.push([x, 16 + r() * 22]); return out; })();   // feste Lücken im Kronendach
 let forestBackCache = null, forestBackKey = "";
+const WTINT = document.createElement("canvas"), wtg = WTINT.getContext("2d");                 // Zwischenfläche zum Einfärben der Waldebenen
 function drawForestBack(di, si) {
   const L = di.light, gloom = clamp(colony.rain ? 0.6 : 0, 0, 1);
   const deep = mix(mix([16, 22, 18], [96, 118, 98], L), [150, 160, 150], gloom * 0.4);
   const snowK = si.snow;
   const key = `${Math.round(L * 14)}|${si.idx}|${Math.round(si.blend * 4)}|${Math.round(snowK * 3)}|${Math.round(gloom * 3)}`;
-  let rebuilt = false, busy = false, tinting = false, fin = false;
+  let rebuilt = false, busy = false;
   const bkey = `${si.idx}|${Math.round(si.blend * 4)}|${Math.round(snowK * 3)}`, hz = mix(deep, [210, 220, 205], 0.25 * L);
   WOOD.forEach((ly, li) => {
     if (!ly.base) { buildWoodLayer(ly, li, null, si, snowK); ly.baseKey = bkey; ly.key = null; }   // allererstes Mal: sofort
@@ -7882,13 +7865,8 @@ function drawForestBack(di, si) {
       if (!ly.job || ly.job.key !== bkey) { ly.job = woodJob(ly, li, si, snowK, ly.job ? ly.job.c : document.createElement("canvas")); ly.job.key = bkey; }
       if (woodRun(ly.job, 6)) { const old = ly.base; ly.base = ly.job.c; old.width = old.height = 0; ly.spare = null; ly.job = null; ly.baseKey = bkey; ly.key = null; }   // alte Fläche sofort freigeben (Grafikspeicher)
     }
-    if (!ly.cache || ly.cache.width !== ly.base.width) { tintWoodLayer(ly, L, hz); ly.key = key; ly.tj = null; rebuilt = true; }   // allererstes Mal: sofort ganz
-    else if (ly.key !== key) {                                                                     // Licht/Wetter: verteilt einfärben, eine Ebene pro Bild
-      if (!ly.tj) ly.tj = { key, L, hz, x: 0, mixed: false }; else if (ly.tj.key !== key) Object.assign(ly.tj, { key, L, hz, mixed: true });   // weiterarbeiten statt neu anfangen
-      if (!tinting) { tinting = true; if (tintWoodStep(ly, ly.tj, 4)) { if (ly.tj.mixed) Object.assign(ly.tj, { x: 0, mixed: false }); else { ly.key = key; ly.tj = null; fin = true; } } }
-    }
+    if (ly.key == null) { ly.key = 1; rebuilt = true; }                                            // neues Grundbild: Hintergrund neu zusammensetzen
   });
-  if (fin && WOOD.every(l => !l.tj)) rebuilt = true;                                              // Hintergrund nur einmal austauschen, wenn alle Ebenen die neue Lichtstufe haben
   // Der ganze ruhende Hintergrund wird als ein Bild in Bildschirmgröße gemerkt und nur neu gezeichnet,
   // wenn sich Kamera, Licht, Jahreszeit oder Wetter ändern
   const T = ctx.getTransform();
@@ -7902,10 +7880,16 @@ function drawForestBack(di, si) {
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, forestBackCache.width, forestBackCache.height); ctx.setTransform(T);
       const g0 = ctx.createLinearGradient(0, -900, 0, S.y + 20); g0.addColorStop(0, rgb(deep, 1.15)); g0.addColorStop(1, rgb(deep, 0.75));
       ctx.fillStyle = g0; ctx.fillRect(cam.x - 4000, -1400, 8000, 1430);
-      for (const ly of WOOD) {
-        ctx.save(); ctx.translate(cam.x * (1 - ly.par), cam.y * (1 - ly.par) * 0.15);
-        ctx.drawImage(ly.cache, WOOD_BOX.x0, WOOD_BOX.y0, WOOD_BOX.x1 - WOOD_BOX.x0, WOOD_BOX.y1 - WOOD_BOX.y0);
-        ctx.restore();
+      const W2 = forestBackCache.width, H2 = forestBackCache.height;
+      if (WTINT.width !== W2 || WTINT.height !== H2) { WTINT.width = W2; WTINT.height = H2; }
+      for (const ly of WOOD) {                                                                    // jede Ebene: Grundbild → Dämmerung und Dunst als Farbschichten → in den Hintergrund
+        wtg.setTransform(1, 0, 0, 1, 0, 0); wtg.globalCompositeOperation = "source-over"; wtg.clearRect(0, 0, W2, H2); wtg.setTransform(T);
+        wtg.save(); wtg.translate(cam.x * (1 - ly.par), cam.y * (1 - ly.par) * 0.15);
+        wtg.drawImage(ly.base, WOOD_BOX.x0, WOOD_BOX.y0, WOOD_BOX.x1 - WOOD_BOX.x0, WOOD_BOX.y1 - WOOD_BOX.y0);
+        wtg.restore(); wtg.setTransform(1, 0, 0, 1, 0, 0); wtg.globalCompositeOperation = "source-atop";
+        wtg.fillStyle = `rgba(12,16,14,${(1 - L) * 0.8})`; wtg.fillRect(0, 0, W2, H2); wtg.fillStyle = rgb(hz, 1, ly.haze); wtg.fillRect(0, 0, W2, H2);
+        wtg.globalCompositeOperation = "source-over";
+        ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(WTINT, 0, 0); ctx.restore();
       }
       // Kronendach oben, durch das nur wenig Himmel scheint
       ctx.save(); ctx.translate(cam.x * 0.8, cam.y * 0.8 * 0.15);
@@ -8004,9 +7988,9 @@ function drawStump() {
   for (const [dx, dy] of [[-30, -10], [-26, -16], [32, -14]]) { ell(x + dx, y + dy, 4, 2, 0, "#c8a060"); ell(x + dx, y + dy + 2, 1, 3, 0, "#e8dcc0"); }   // kleine Pilze
 }
 let moundCache = null, moundKey = "";
-function buildMoundSprite(R, H, snow) {
-  const pad = 12, w = Math.ceil(R * 2 + pad * 2), h = Math.ceil(H + R * 0.5 + pad * 2), c = document.createElement("canvas"); c.width = w; c.height = h;
-  const g = c.getContext("2d"), cx = w / 2, base = H + pad, r = mulberry32(55 + (R | 0)), Rr = (a, b) => a + r() * (b - a);
+function buildMoundSprite(R, H, snow, reuse) {
+  const pad = 12, w = Math.ceil(R * 2 + pad * 2), h = Math.ceil(H + R * 0.5 + pad * 2), c = reuse || document.createElement("canvas"); if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }   // vorhandene Fläche wiederverwenden
+  const g = c.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = "source-over"; g.filter = "none"; g.clearRect(0, 0, w, h); const cx = w / 2, base = H + pad, r = mulberry32(55 + (R | 0)), Rr = (a, b) => a + r() * (b - a);
   const dome = new Path2D(); dome.moveTo(cx - R, base);
   dome.bezierCurveTo(cx - R * 0.8, base - H * 0.45, cx - R * 0.32, base - H * 1.04, cx, base - H);
   dome.bezierCurveTo(cx + R * 0.32, base - H * 1.04, cx + R * 0.8, base - H * 0.45, cx + R, base);
@@ -8036,7 +8020,7 @@ function drawNeedleMound() {
   if (!exitOpen()) return;
   const { H, R } = moundSize(), si = seasonInfo(), v = 0.16, bx = EXIT_U + 4 + S.x * v, by = S.y * v;
   const key = `${Math.round(R / 3)}|${si.snow > 0.4}`;
-  if (key !== moundKey) { moundKey = key; moundCache = buildMoundSprite(R, H, si.snow > 0.4); }
+  if (key !== moundKey) { moundKey = key; moundCache = buildMoundSprite(R, H, si.snow > 0.4, moundCache && moundCache.c); }
   ctx.save(); ctx.beginPath(); ctx.rect(bx - R * 2, by - H - 30, R * 4, -by + H + 30.5); ctx.clip();     // was unter die Schnittkante ragt, abschneiden
   ell(bx + R * 0.15, by + 2, R * 1.12, R * 0.4, 0, "rgba(0,0,0,.25)");
   ctx.drawImage(moundCache.c, bx - moundCache.cx, by - moundCache.base, moundCache.c.width / (moundCache.sc || 1), moundCache.c.height / (moundCache.sc || 1));
