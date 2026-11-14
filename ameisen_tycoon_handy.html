@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#120c07"><meta name="format-detection" content="telephone=no">
-<script id="apkUpd0">(function(){var OWN=109;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
+<script id="apkUpd0">(function(){var OWN=110;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
 try{var v=R.ver();if(v>OWN){var n=+(localStorage.getItem('at_ub')||0);if(n>=3){R.clear();localStorage.setItem('at_ub','0');}
 else{localStorage.setItem('at_ub',String(n+1));R.boot();window.stop();}}else if(v&&v<OWN)R.clear();}catch(e){}})();</script>
 <title>Ameisen-Simulator</title>
@@ -224,7 +224,7 @@ const WALD = CHAPTER === "wald", ARMY = CHAPTER === "schwarm", REGEN = CHAPTER =
 // =====================================================================
 //  Ameisen-Tycoon – 2,5D-Querschnitt durch den Ameisenbau
 // =====================================================================
-const VERSION = "v1.09";
+const VERSION = "v1.10";
 const UPDATES = [
   ["v0.1", "Prototyp: eine Ameise sucht Futter an der Oberfläche."],
   ["v0.2", "Blick in den Bau: Königin, Eier, Larven, Puppen und Arbeiterinnen. Musik und Höhlen-Geräusche."],
@@ -336,6 +336,7 @@ const UPDATES = [
   ["v1.07", "Neu im Menü: „⏯️ Anderer Tab“. Wählst du „Weiterspielen“, lebt dein Volk weiter, während du in einem anderen Browser-Tab bist – stumm und in der eingestellten Geschwindigkeit. Zeit, die der Browser im Hintergrund zurückhält, wird nachgeholt. Standard bleibt „Pause“."],
   ["v1.08", "Keine Aussetzer mehr im Regenwald: Jedes Mal, wenn Regen einsetzte oder aufhörte und bei jeder Lichtstufe in der Dämmerung, wurden die drei großen Urwald-Ebenen komplett neu gezeichnet – auf schwächeren Rechnern ein Hänger von bis zu einer Sekunde. Jetzt werden sie nur einmal gezeichnet, Dämmerung und Regendunst kommen wie im Wald blitzschnell als Farbschicht darüber. Nebenbei leuchtet der Wachsglanz auf Monstera- und Helikonienblättern nachts nicht mehr hell."],
   ["v1.09", "Fehler behoben: War das Volk voll – im Regenwald passiert das leicht, weil ohne Winter kaum Arbeiterinnen sterben –, konnte die Königin nach „Geflügelte aufziehen“ kein einziges Ei legen. Es hieß nur „Kein Platz mehr – baue eine Wohnkammer“, obwohl es keine mehr gab. Eier für Geflügelte brauchen jetzt keinen Wohnplatz, sie wachsen im eigenen Saal heran. Und ist wirklich alles gebaut, sagt das Spiel jetzt ehrlich „alle Wohnkammern sind belegt“."],
+  ["v1.10", "Der Regenwald hat jetzt ein richtiges Ende: Ist alles ausgebaut und sind die Geflügelten in der Regenzeit ausgeflogen, erscheint im Ausbau-Menü „Weiter zu Kapitel 4“. Ein kurzer Film zeigt den Hochzeitsflug der Blattschneider – und das Buch blättert um zu den Wanderameisen. Bisher wurde Kapitel 4 einfach so freigeschaltet. Im Regenwald zeigt jetzt außerdem „Weg zum großen Hochzeitsflug“, was noch fehlt."],
 ];
 const SAVE_KEY = SK("ameisen-tycoon-save-v4" + (WALD ? "-wald" : ARMY ? "-schwarm" : REGEN ? "-regen" : ""));
 
@@ -7091,8 +7092,10 @@ function tipText() {
   if (colony.night) return "Nachts bleiben die Sammlerinnen im Bau. Nutze die Zeit zum Graben und Brüten.";
   if (!sources.some(s => s.known && s.amount > 0)) return "Eine Späherin sucht draußen nach Futter. Findet sie etwas, legt sie eine Duftspur für die anderen.";
   if (ws < 3 && !eggBlock()) return "Lege weitere Eier – mehr Arbeiterinnen sammeln mehr Nahrung.";
+  if (CHAPTER === "regen" && nestComplete() && colony.flights > 0 && !book.chapters.includes("schwarm")) return L("👑 Deine Prinzessinnen sind ausgeflogen! Öffne das Ausbau-Menü: „Weiter zu Kapitel 4“.", "👑 Your princesses have flown! Open the upgrade menu: “On to chapter 4”.");
   const next = UNLOCKS.find(u => !unlocked[u.id] && u.req() && u.id !== "more");
   if (next) return colony.food >= next.cost ? `Du kannst jetzt „${next.name}“ freischalten!` : `Spare Nahrung für „${next.name}“ (${next.cost} ${FOODI}).`;
+  if (CHAPTER === "regen" && nestComplete() && !(colony.flights > 0) && (colony.alateEggs > 0 || ants.some(a => a.kind === "alate"))) return L("🪽 Die Geflügelten wachsen heran. In der Regenzeit fliegen sie an einem Nachmittag nach dem Regen aus – dann beginnt Kapitel 4.", "🪽 The winged ants are growing up. In the wet season they fly out one afternoon after the rain – then chapter 4 begins.");
   if (eggBlockFree() === "voll") return homeLeft() ? "Die Kolonie ist voll – baue die nächste Wohnkammer." : L("Die Kolonie ist voll – alle Wohnkammern sind belegt. Mit „Geflügelte aufziehen“ geht es zum großen Hochzeitsflug.", "The colony is full – all living chambers are taken. Rear winged ants to start the great nuptial flight.");
   return "Weiter so! Lege Eier und sammle Nahrung.";
 }
@@ -8120,7 +8123,7 @@ function woodpecker(pan) {                                    // Specht trommelt
 const CH_ORDER = ["wiese", "wald", "regen", "schwarm"], CH_TITLE = { wiese: "🌾 Kapitel 1 · Die Wiese", wald: "🌲 Kapitel 2 · Der Wald", regen: "🌴 Kapitel 3 · Der Regenwald", schwarm: "⚔️ Kapitel 4 · Die Wanderameisen" }, CH_SHORT = { wiese: "🌾 Wiese", wald: "🌲 Wald", regen: "🌴 Regenwald", schwarm: "⚔️ Wanderameisen" };
 const book = (() => { try { return JSON.parse(localStorage.getItem(SK("ameisenBuch")) || "{}"); } catch (e) { return {}; } })();
 book.chapters ||= ["wiese"];
-if (book.chapters.includes("regen") && !book.chapters.includes("schwarm")) book.chapters.push("schwarm");   // Kapitel 4 ist im Aufbau und schon spielbar
+// v1.10: Kapitel 4 wird jetzt – wie die anderen – durch den großen Hochzeitsflug freigeschaltet (Regenwald: Geflügelte fliegen in der Regenzeit aus)
 const FILM2 = (() => { try { const v = JSON.parse(sessionStorage.getItem("ameisenFilm2") || "null"); sessionStorage.removeItem("ameisenFilm2"); return v; } catch (e) { return null; } })();
 const FILM3 = (() => { try { const v = JSON.parse(sessionStorage.getItem("ameisenFilm3") || "null"); sessionStorage.removeItem("ameisenFilm3"); return v; } catch (e) { return null; } })();
 if ((FILM2 && FILM2.preview) || (FILM3 && FILM3.preview)) noSave = true;                 // nur angesehen: nichts speichern, nichts freischalten
@@ -8192,7 +8195,7 @@ function nestComplete() {
 let flightCard = null;
 let flightTodo = null;
 function updateFlightTodo() {                                                                    // was noch fehlt bis zum großen Hochzeitsflug
-  const show = ((CHAPTER === "wiese" && !book.chapters.includes("wald")) || (CHAPTER === "wald" && !book.chapters.includes("regen"))) && !nestComplete() && nestProgress() >= 0.5;
+  const show = ((CHAPTER === "wiese" && !book.chapters.includes("wald")) || (CHAPTER === "wald" && !book.chapters.includes("regen")) || (CHAPTER === "regen" && !book.chapters.includes("schwarm"))) && !nestComplete() && nestProgress() >= 0.5;
   if (!show) { if (flightTodo) { flightTodo.remove(); flightTodo = null; } return; }
   if (!flightTodo) { flightTodo = document.createElement("div"); flightTodo.className = "card flightCard"; $("cards").prepend(flightTodo); }
   const items = [];
@@ -8205,20 +8208,22 @@ function updateFlightTodo() {                                                   
 }
 function updateFlightCard() {
   updateFlightTodo();
-  const show = (CHAPTER === "wiese" || CHAPTER === "wald") && nestComplete();
+  const show = ((CHAPTER === "wiese" || CHAPTER === "wald") && nestComplete()) || (CHAPTER === "regen" && nestComplete() && (colony.flights || 0) > 0);
   if (!show) { if (flightCard) { flightCard.remove(); flightCard = null; } return; }
-  const nextCh = WALD ? "regen" : "wald";
+  const nextCh = WALD ? "regen" : CHAPTER === "regen" ? "schwarm" : "wald";
   if (!flightCard) {
     flightCard = document.createElement("div"); flightCard.className = "card buy flightCard";
     flightCard.innerHTML = `<div class="ic">👑</div><div class="bd"><div class="t">Großer Hochzeitsflug</div><div class="d">Das Nest ist fertig ausgebaut. An einem schwülen Sommertag schwärmen Hunderte junge Königinnen und Männchen aus – ein neues Kapitel beginnt.</div><div class="act"><button>Hochzeitsflug starten</button></div></div>`;
-    flightCard.querySelector("button").onclick = () => WALD ? playRegenFlight() : playFlightFilm();
+    flightCard.querySelector("button").onclick = () => WALD ? playRegenFlight() : CHAPTER === "regen" ? playRegenFlight(false, "schwarm") : playFlightFilm();
+    if (CHAPTER === "regen") { flightCard.querySelector(".d").textContent = L("Nach dem Regen sind die jungen Blattschneider-Königinnen ausgeflogen – dein Volk hat es geschafft. Das Buch blättert weiter zu Kapitel 4: den Wanderameisen.", "After the rain the young leafcutter queens have flown out – your colony made it. The book turns to chapter 4: the army ants.");
+      flightCard.querySelector("button").textContent = L("Weiter zu Kapitel 4", "On to chapter 4"); }
     if (WALD) flightCard.querySelector(".d").textContent = "Das Waldameisen-Nest ist fertig ausgebaut. Die Prinzessinnen schwärmen aus – und das Buch blättert weiter zu Kapitel 3: dem Regenwald.";
     $("cards").prepend(flightCard);
-    if (!colony.flags.bigFlight) { colony.flags.bigFlight = 1; toast("👑 Das Nest ist vollständig ausgebaut! Im Ausbau-Menü kannst du jetzt den großen Hochzeitsflug starten."); }
+    if (!colony.flags.bigFlight) { colony.flags.bigFlight = 1; toast(CHAPTER === "regen" ? L("👑 Die Prinzessinnen sind ausgeflogen! Im Ausbau-Menü geht es jetzt weiter zu Kapitel 4: den Wanderameisen.", "👑 The princesses have flown! In the upgrade menu you can now go on to chapter 4: the army ants.") : "👑 Das Nest ist vollständig ausgebaut! Im Ausbau-Menü kannst du jetzt den großen Hochzeitsflug starten."); }
   }
   if (book.chapters.includes(nextCh)) { flightCard.querySelector(".t").textContent = "Großer Hochzeitsflug (noch einmal ansehen)"; }
 }
-{ const us = updateShop; updateShop = () => { us(); updateFlightCard(); const b = $("shopBadge"); if (flightCard && !book.chapters.includes("wald")) { b.textContent = (+b.textContent || 0) + 1; b.classList.add("has"); } }; }
+{ const us = updateShop; updateShop = () => { us(); updateFlightCard(); const b = $("shopBadge"); if (flightCard && !book.chapters.includes(WALD ? "regen" : CHAPTER === "regen" ? "schwarm" : "wald")) { b.textContent = (+b.textContent || 0) + 1; b.classList.add("has"); } }; }
 
 // =====================================================================
 //  Filmszene: Hochzeitsflug → Waldrand → Waldameisen-Königin unter dem Stumpf
@@ -12359,10 +12364,11 @@ const RFILM_CAPS2 = [
   [28.6, 36.4, "Unten spuckt sie das Pilzklümpchen aus und düngt es mit ihrem eigenen Kot. Wochenlang pflegt sie den winzigen Garten ganz allein."],
   [36.8, 41, "Aus diesem Krümel Pilz soll ein Garten werden, der Millionen Ameisen ernährt."]];
 // --- Teil 1 im Wald ---
-function playRegenFlight(preview = false) {
+const AFILM_CAPS1 = [[0.6, 6.2, L("Nach dem schweren Regen dampft der Wald. Aus dem riesigen Blattschneider-Nest steigen die jungen Königinnen auf …", "After the heavy rain the forest steams. From the huge leafcutter nest the young queens rise …")], [6.6, 12.6, L("… doch nicht weit entfernt rauscht etwas durchs Laub: Ein Heer ohne Nest zieht durch den Wald.", "… but not far away something rustles through the leaves: an army without a nest is marching through the forest.")]];
+function playRegenFlight(preview = false, to = "regen") {
   if (film) return; if (!preview) save();
-  film = { part: "R1", t: 0, preview, simBefore: simTime, spBefore: speed, actors: [], wings: [], capIdx: -1 };
-  film.box = filmUI(); film.box.querySelector("#filmTitle").innerHTML = "<small>KAPITEL 3</small><div>Der Regenwald</div>"; setSpeed(1);
+  film = { part: "R1", t: 0, preview, to, caps: to === "schwarm" ? AFILM_CAPS1 : null, simBefore: simTime, spBefore: speed, actors: [], wings: [], capIdx: -1 };
+  film.box = filmUI(); film.box.querySelector("#filmTitle").innerHTML = to === "schwarm" ? L("<small>KAPITEL 4</small><div>Die Wanderameisen</div>", "<small>CHAPTER 4</small><div>The army ants</div>") : "<small>KAPITEL 3</small><div>Der Regenwald</div>"; setSpeed(1);
   for (let i = 0; i < 26; i++) { const fem = i % 3 !== 0, a = filmActor("alate", fem ? "f" : "m", EXIT_U + rnd(-60, 60), rnd(-30, -6), fem ? 1.3 : 0.95); a.flying = true;
     film.actors.push({ a, mode: "fly", start: i * 0.25, p: flightParams(rnd(-30, 30), rnd(-150, -100)) }); }
   rFilmMusic1();
@@ -12370,14 +12376,15 @@ function playRegenFlight(preview = false) {
 function filmTickR1(dt, t) {
   const f = film; const k = ease(clamp(t / 12, 0, 1)); cam.x = EXIT_U + k * 160; cam.y = lerp(-140, -900, k); cam.zoom = lerp(1.8, 0.85, k);
   for (const ac of f.actors) { if (t < ac.start) continue; updateFlyer(ac, dt, t); }
-  filmCaption(RFILM_CAPS1); filmFade(t < 1.2 ? 1 - t / 1.2 : t > 12.4 ? (t - 12.4) / 1.1 : 0);
+  filmCaption(f.caps || RFILM_CAPS1); filmFade(t < 1.2 ? 1 - t / 1.2 : t > 12.4 ? (t - 12.4) / 1.1 : 0);
   if (t > 13.6) endRegenFlight1();
 }
 function endRegenFlight1() {
   const f = film; if (!f) return; simTime = f.simBefore; setSpeed(0);
-  if (f.preview) noSave = true; else if (!book.chapters.includes("regen")) { book.chapters.push("regen"); saveBook(); }
-  try { sessionStorage.setItem("ameisenFilm3", JSON.stringify({ preview: f.preview })); } catch (e) {}
-  film = null; turnPage("regen");
+  const to = f.to || "regen";
+  if (f.preview) noSave = true; else if (!book.chapters.includes(to)) { book.chapters.push(to); saveBook(); }
+  if (to === "regen") try { sessionStorage.setItem("ameisenFilm3", JSON.stringify({ preview: f.preview })); } catch (e) {}
+  film = null; turnPage(to);
 }
 // --- Teil 2 im Regenwald ---
 const MOTHER = { x: EXIT_U - 820, R: 210 };
