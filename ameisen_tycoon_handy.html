@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#120c07"><meta name="format-detection" content="telephone=no">
-<script id="apkUpd0">(function(){var OWN=111;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
+<script id="apkUpd0">(function(){var OWN=112;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
 try{var v=R.ver();if(v>OWN){var n=+(localStorage.getItem('at_ub')||0);if(n>=3){R.clear();localStorage.setItem('at_ub','0');}
 else{localStorage.setItem('at_ub',String(n+1));R.boot();window.stop();}}else if(v&&v<OWN)R.clear();}catch(e){}})();</script>
 <title>Ameisen-Simulator</title>
@@ -224,7 +224,7 @@ const WALD = CHAPTER === "wald", ARMY = CHAPTER === "schwarm", REGEN = CHAPTER =
 // =====================================================================
 //  Ameisen-Tycoon – 2,5D-Querschnitt durch den Ameisenbau
 // =====================================================================
-const VERSION = "v1.11";
+const VERSION = "v1.12";
 const UPDATES = [
   ["v0.1", "Prototyp: eine Ameise sucht Futter an der Oberfläche."],
   ["v0.2", "Blick in den Bau: Königin, Eier, Larven, Puppen und Arbeiterinnen. Musik und Höhlen-Geräusche."],
@@ -338,6 +338,7 @@ const UPDATES = [
   ["v1.09", "Fehler behoben: War das Volk voll – im Regenwald passiert das leicht, weil ohne Winter kaum Arbeiterinnen sterben –, konnte die Königin nach „Geflügelte aufziehen“ kein einziges Ei legen. Es hieß nur „Kein Platz mehr – baue eine Wohnkammer“, obwohl es keine mehr gab. Eier für Geflügelte brauchen jetzt keinen Wohnplatz, sie wachsen im eigenen Saal heran. Und ist wirklich alles gebaut, sagt das Spiel jetzt ehrlich „alle Wohnkammern sind belegt“."],
   ["v1.10", "Der Regenwald hat jetzt ein richtiges Ende: Ist alles ausgebaut und sind die Geflügelten in der Regenzeit ausgeflogen, erscheint im Ausbau-Menü „Weiter zu Kapitel 4“. Ein kurzer Film zeigt den Hochzeitsflug der Blattschneider – und das Buch blättert um zu den Wanderameisen. Bisher wurde Kapitel 4 einfach so freigeschaltet. Im Regenwald zeigt jetzt außerdem „Weg zum großen Hochzeitsflug“, was noch fehlt."],
   ["v1.11", "Keine Zeitlupe mehr bei großen Blattschneider-Völkern: Die Pilzgärten wurden in jedem Bild aus Tausenden einzelnen Pünktchen neu gezeichnet – je größer das Volk, desto größer die Gärten und desto langsamer das Spiel. Jetzt wird ihre Form nur berechnet, wenn sie wachsen, und pro Bild nur noch gefüllt. Sie sehen genauso aus wie vorher, die Gongylidien funkeln weiter."],
+  ["v1.12", "Regenwald: Die Geflügelten schwärmen jetzt wie echte Blattschneider gleich zu Beginn der Regenzeit aus – nicht erst gegen Ende der Kleinen Regenzeit. Während sie warten, zeigt der Tipp, wie viele Tage es noch bis zur Regenzeit dauert – statt dazu aufzufordern, sie noch einmal zu kaufen."],
 ];
 const SAVE_KEY = SK("ameisen-tycoon-save-v4" + (WALD ? "-wald" : ARMY ? "-schwarm" : REGEN ? "-regen" : ""));
 
@@ -3091,12 +3092,14 @@ function decideAlate(a) {
   a.queue.push({ go: nearestIn(c.nodes, tx, floorYc(c, tx)).id, free: chamberPt(c, tx), task: a.sex === "f" ? "Prinzessin – wartet auf den Hochzeitsflug" : "Männchen – wartet auf den Hochzeitsflug" });
   a.queue.push({ wait: rnd(4, 9), anim: Math.random() < 0.3 ? "wings" : null });
 }
+// v1.12: Blattschneider schwärmen gleich mit Beginn der Regenzeit (Kleine und Hohe Regenzeit), nicht erst gegen ihr Ende
+const flightSeason = si => REGEN && !ARMY ? si.idx <= 1 : si.idx === 1 || (si.idx === 0 && si.frac > 0.6);
 function updateFlight(dt) {
   const al = ants.filter(a => a.kind === "alate");
   if (colony.flightT > 0) { colony.flightT -= dt; if (colony.flightT <= 0 && !al.length) colony.flightT = 0; }
   const ready = al.filter(a => a.callow < 0.3);
   const di = dayInfo(), si = seasonInfo();
-  if (!(colony.flightT > 0) && ready.length >= 2 && (si.idx === 1 || (si.idx === 0 && si.frac > 0.6)) && di.hour > 13 && di.hour < 18 && !colony.rain && entranceOpenNow()
+  if (!(colony.flightT > 0) && ready.length >= 2 && flightSeason(si) && di.hour > 13 && di.hour < 18 && !colony.rain && entranceOpenNow()
       && Math.random() < dt / (DAY_LEN * 0.15)) {
     colony.flightT = 60;
     const f = ready.filter(a => a.sex === "f").length, m = ready.length - f;
@@ -7095,10 +7098,14 @@ function tipText() {
   if (colony.night) return "Nachts bleiben die Sammlerinnen im Bau. Nutze die Zeit zum Graben und Brüten.";
   if (!sources.some(s => s.known && s.amount > 0)) return "Eine Späherin sucht draußen nach Futter. Findet sie etwas, legt sie eine Duftspur für die anderen.";
   if (ws < 3 && !eggBlock()) return "Lege weitere Eier – mehr Arbeiterinnen sammeln mehr Nahrung.";
+  if (CHAPTER === "regen" && nestComplete() && !(colony.flights > 0) && (colony.alateEggs > 0 || ants.some(a => a.kind === "alate"))) {
+    const si = seasonInfo();
+    if (si.idx >= 2) { const d = Math.max(1, Math.ceil(((4 - si.idx) - si.frac) * SEASON_DAYS)); return L(`🪽 Die Geflügelten warten auf die nächste Regenzeit – vorher fliegen sie nicht aus. Noch etwa ${d} ${d === 1 ? "Tag" : "Tage"}, dann schwärmen sie aus und Kapitel 4 beginnt. (Tipp: mit 8× geht es schnell.)`, `🪽 The winged ants are waiting for the next wet season – they won't fly before. About ${d} more ${d === 1 ? "day" : "days"}, then they swarm out and chapter 4 begins. (Tip: 8× makes it quick.)`); }
+    return L("🪽 Regenzeit! Sobald die Geflügelten ausgewachsen sind, fliegen sie an einem Nachmittag (13–18 Uhr) aus, wenn es gerade nicht regnet – dann beginnt Kapitel 4.", "🪽 Wet season! Once the winged ants are grown, they fly out one afternoon (1–6 pm) when it isn't raining – then chapter 4 begins.");
+  }
   if (CHAPTER === "regen" && nestComplete() && colony.flights > 0 && !book.chapters.includes("schwarm")) return L("👑 Deine Prinzessinnen sind ausgeflogen! Öffne das Ausbau-Menü: „Weiter zu Kapitel 4“.", "👑 Your princesses have flown! Open the upgrade menu: “On to chapter 4”.");
   const next = UNLOCKS.find(u => !unlocked[u.id] && u.req() && u.id !== "more");
   if (next) return colony.food >= next.cost ? `Du kannst jetzt „${next.name}“ freischalten!` : `Spare Nahrung für „${next.name}“ (${next.cost} ${FOODI}).`;
-  if (CHAPTER === "regen" && nestComplete() && !(colony.flights > 0) && (colony.alateEggs > 0 || ants.some(a => a.kind === "alate"))) return L("🪽 Die Geflügelten wachsen heran. In der Regenzeit fliegen sie an einem Nachmittag nach dem Regen aus – dann beginnt Kapitel 4.", "🪽 The winged ants are growing up. In the wet season they fly out one afternoon after the rain – then chapter 4 begins.");
   if (eggBlockFree() === "voll") return homeLeft() ? "Die Kolonie ist voll – baue die nächste Wohnkammer." : L("Die Kolonie ist voll – alle Wohnkammern sind belegt. Mit „Geflügelte aufziehen“ geht es zum großen Hochzeitsflug.", "The colony is full – all living chambers are taken. Rear winged ants to start the great nuptial flight.");
   return "Weiter so! Lege Eier und sammle Nahrung.";
 }
