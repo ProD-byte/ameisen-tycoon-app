@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#120c07"><meta name="format-detection" content="telephone=no">
-<script id="apkUpd0">(function(){var OWN=107;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
+<script id="apkUpd0">(function(){var OWN=108;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
 try{var v=R.ver();if(v>OWN){var n=+(localStorage.getItem('at_ub')||0);if(n>=3){R.clear();localStorage.setItem('at_ub','0');}
 else{localStorage.setItem('at_ub',String(n+1));R.boot();window.stop();}}else if(v&&v<OWN)R.clear();}catch(e){}})();</script>
 <title>Ameisen-Simulator</title>
@@ -224,7 +224,7 @@ const WALD = CHAPTER === "wald", ARMY = CHAPTER === "schwarm", REGEN = CHAPTER =
 // =====================================================================
 //  Ameisen-Tycoon – 2,5D-Querschnitt durch den Ameisenbau
 // =====================================================================
-const VERSION = "v1.07";
+const VERSION = "v1.08";
 const UPDATES = [
   ["v0.1", "Prototyp: eine Ameise sucht Futter an der Oberfläche."],
   ["v0.2", "Blick in den Bau: Königin, Eier, Larven, Puppen und Arbeiterinnen. Musik und Höhlen-Geräusche."],
@@ -334,6 +334,7 @@ const UPDATES = [
   ["v1.05", "Die schöne Grafik bleibt: Das Spiel senkt die Qualität nicht mehr von selbst. Im Menü gibt es jetzt „🖥️ Grafik“ mit Hoch (Standard), Auto (nimmt bei dauerhaftem Ruckeln nur die teuren Lichteffekte weg, die Auflösung bleibt) und Sparsam (für schwache Rechner). Neu ist außerdem „📊 Leistung anzeigen“: Es zeigt Bilder pro Sekunde und den größten Hänger der letzten 10 Sekunden – und ob die Zeit im Spiel selbst oder beim Browser/der Grafik verloren ging."],
   ["v1.06", "Weniger Grafikspeicher im Wald: Der Wald brauchte fast doppelt so viel Grafikspeicher wie die Wiese – auf Laptops mit eingebauter Grafik führte das zu Hängern von über einer Sekunde. Die drei Waldebenen liegen jetzt nur noch einmal im Speicher (eingefärbt wird beim Zusammensetzen), und die Erd-Vorlage für frisch gegrabene Gänge ist auf halbe Auflösung verkleinert. Außerdem legt der wachsende Nadelhügel nicht mehr bei jedem Wachstumsschritt eine neue Zeichenfläche an. Zusammen rund 64 MB weniger – an der sichtbaren Grafik ändert sich nichts."],
   ["v1.07", "Neu im Menü: „⏯️ Anderer Tab“. Wählst du „Weiterspielen“, lebt dein Volk weiter, während du in einem anderen Browser-Tab bist – stumm und in der eingestellten Geschwindigkeit. Zeit, die der Browser im Hintergrund zurückhält, wird nachgeholt. Standard bleibt „Pause“."],
+  ["v1.08", "Keine Aussetzer mehr im Regenwald: Jedes Mal, wenn Regen einsetzte oder aufhörte und bei jeder Lichtstufe in der Dämmerung, wurden die drei großen Urwald-Ebenen komplett neu gezeichnet – auf schwächeren Rechnern ein Hänger von bis zu einer Sekunde. Jetzt werden sie nur einmal gezeichnet, Dämmerung und Regendunst kommen wie im Wald blitzschnell als Farbschicht darüber. Nebenbei leuchtet der Wachsglanz auf Monstera- und Helikonienblättern nachts nicht mehr hell."],
 ];
 const SAVE_KEY = SK("ameisen-tycoon-save-v4" + (WALD ? "-wald" : ARMY ? "-schwarm" : REGEN ? "-regen" : ""));
 
@@ -11974,8 +11975,9 @@ function rfUnder(g, u, y, fc) {                                                 
 }
 function buildRFLayer(ly, fc, L) {
   const B = WOOD_BOX, res = [0.42, 0.55, 0.7][ly.li]; ly.cache ||= document.createElement("canvas");
-  const c = ly.cache; c.width = Math.ceil((B.x1 - B.x0) * res); c.height = Math.ceil((B.y1 - B.y0) * res);
-  const g = c.getContext("2d"); g.setTransform(res, 0, 0, res, -B.x0 * res, -B.y0 * res);
+  const c = ly.cache, W2 = Math.ceil((B.x1 - B.x0) * res), H2 = Math.ceil((B.y1 - B.y0) * res);
+  if (c.width !== W2 || c.height !== H2) { c.width = W2; c.height = H2; }                         // Fläche wiederverwenden
+  const g = c.getContext("2d"); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W2, H2); g.setTransform(res, 0, 0, res, -B.x0 * res, -B.y0 * res);
   const bot = S.y + 10 - ly.li * 4;
   for (const t of ly.items) {
     const r = mulberry32((t.seed * 1e6) | 0), x = t.x, w = t.w;
@@ -12002,13 +12004,24 @@ let rfBackCache = null, rfBackKey = "";
 function drawRainforestBack(di, si) {
   const L = di.light, gloom = colony.rain ? 0.55 : 0, deep = mix(mix([12, 22, 18], [86, 120, 96], L), [140, 156, 150], gloom * 0.4);
   const key = `${Math.round(L * 12)}|${Math.round(gloom * 3)}`; let rebuilt = false;
-  for (const ly of RF) if (ly.k2 !== key && (!rebuilt || !ly.cache)) { const hz = mix(deep, [190, 214, 196], 0.28 * L); buildRFLayer(ly, c => rgb(mix(mix(c, [8, 16, 12], (1 - L) * 0.85), hz, ly.haze)), L); ly.k2 = key; rebuilt = true; }
+  // v1.08: Ebenen nur einmal in reinen Farben zeichnen – Dämmerung und Regendunst kommen beim Zusammensetzen als Farbschichten dazu (wie im Wald)
+  for (const ly of RF) if (!ly.cache) { buildRFLayer(ly, c => rgb(c), L); rebuilt = true; }
+  const hz = mix(deep, [190, 214, 196], 0.28 * L);
   const T = ctx.getTransform(), vkey = `${key}|${T.a.toFixed(4)}|${T.e.toFixed(1)}|${T.f.toFixed(1)}|${canvas.width}x${canvas.height}` + (rebuilt ? Math.random() : "");
   if (vkey !== rfBackKey) { rfBackKey = vkey; rfBackCache ||= document.createElement("canvas"); if (rfBackCache.width !== canvas.width || rfBackCache.height !== canvas.height) { rfBackCache.width = canvas.width; rfBackCache.height = canvas.height; }
     const keep = ctx; ctx = rfBackCache.getContext("2d");
     try { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, rfBackCache.width, rfBackCache.height); ctx.setTransform(T);
       const g0 = ctx.createLinearGradient(0, -1200, 0, S.y + 20); g0.addColorStop(0, rgb(deep, 1.25)); g0.addColorStop(1, rgb(deep, 0.7)); ctx.fillStyle = g0; ctx.fillRect(cam.x - 4000, -1600, 8000, 1630);
-      for (const ly of RF) { ctx.save(); ctx.translate(cam.x * (1 - ly.par), cam.y * (1 - ly.par) * 0.15); ctx.drawImage(ly.cache, WOOD_BOX.x0, WOOD_BOX.y0, WOOD_BOX.x1 - WOOD_BOX.x0, WOOD_BOX.y1 - WOOD_BOX.y0); ctx.restore(); }
+      const W2 = rfBackCache.width, H2 = rfBackCache.height;
+      if (WTINT.width !== W2 || WTINT.height !== H2) { WTINT.width = W2; WTINT.height = H2; }
+      for (const ly of RF) {
+        wtg.setTransform(1, 0, 0, 1, 0, 0); wtg.globalCompositeOperation = "source-over"; wtg.clearRect(0, 0, W2, H2); wtg.setTransform(T);
+        wtg.save(); wtg.translate(cam.x * (1 - ly.par), cam.y * (1 - ly.par) * 0.15); wtg.drawImage(ly.cache, WOOD_BOX.x0, WOOD_BOX.y0, WOOD_BOX.x1 - WOOD_BOX.x0, WOOD_BOX.y1 - WOOD_BOX.y0); wtg.restore();
+        wtg.setTransform(1, 0, 0, 1, 0, 0); wtg.globalCompositeOperation = "source-atop";
+        wtg.fillStyle = `rgba(8,16,12,${(1 - L) * 0.85})`; wtg.fillRect(0, 0, W2, H2); wtg.fillStyle = rgb(hz, 1, ly.haze); wtg.fillRect(0, 0, W2, H2);
+        wtg.globalCompositeOperation = "source-over";
+        ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(WTINT, 0, 0); ctx.restore();
+      }
       ctx.fillStyle = rgb(mix([8, 18, 12], [30, 56, 34], L), 1, 0.5); ctx.fillRect(cam.x - 4000, -1600, 8000, 380);   // dichtes Kronendach oben
     } finally { ctx = keep; } }
   ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(rfBackCache, 0, 0); ctx.restore();
