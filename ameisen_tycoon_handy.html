@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#120c07"><meta name="format-detection" content="telephone=no">
-<script id="apkUpd0">(function(){var OWN=115;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
+<script id="apkUpd0">(function(){var OWN=116;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
 try{var v=R.ver();if(v>OWN){var n=+(localStorage.getItem('at_ub')||0);if(n>=3){R.clear();localStorage.setItem('at_ub','0');}
 else{localStorage.setItem('at_ub',String(n+1));R.boot();window.stop();}}else if(v&&v<OWN)R.clear();}catch(e){}})();</script>
 <title>Ameisen-Simulator</title>
@@ -224,7 +224,7 @@ const WALD = CHAPTER === "wald", ARMY = CHAPTER === "schwarm", REGEN = CHAPTER =
 // =====================================================================
 //  Ameisen-Tycoon – 2,5D-Querschnitt durch den Ameisenbau
 // =====================================================================
-const VERSION = "v1.15";
+const VERSION = "v1.16";
 const UPDATES = [
   ["v0.1", "Prototyp: eine Ameise sucht Futter an der Oberfläche."],
   ["v0.2", "Blick in den Bau: Königin, Eier, Larven, Puppen und Arbeiterinnen. Musik und Höhlen-Geräusche."],
@@ -342,6 +342,7 @@ const UPDATES = [
   ["v1.13", "Regenwald: Sind die Geflügelten ausgewachsen, erscheint im Ausbau-Menü der Knopf „Jetzt ausfliegen lassen“. Damit schwärmen sie sofort zum Hochzeitsflug aus, und es geht sicher weiter zu Kapitel 4 – auch wenn Regen, Nacht oder ein verschlossener Eingang sie bisher im Nest festhielten."],
   ["v1.14", "Kapitel 4 läuft viel flüssiger: Das Biwak wurde beim nächtlichen Umzug in Dutzenden Zwischengrößen neu gezeichnet (jedes Mal bis zu 150 ms Standbild) und füllte dabei den Grafikspeicher. Jetzt wird es nur einmal gemalt und skaliert, und die Ameisenkörper im Querschnitt kommen aus einem fertigen Bild statt 1.600 Einzelzeichnungen pro Frame – bei gleichem Aussehen. Außerdem hat Kapitel 4 eigene Tipps: Sie zeigen Raubzug, Umzug und Standphase, sagen, wann eine Anpassung bezahlbar ist, und raten zum Richtungswechsel, wenn die Gegend leergefressen ist (vorher stand dort „Lass die Königin ihr erstes Ei legen!“)."],
   ["v1.15", "Kapitel 4: Der Raubzug-Knopf zeigt jetzt, wie viel Beute in der gewählten Richtung noch liegt (🦗🦗🦗 viel, 🦗🦗 etwas, 🦗 kaum) – so lohnt sich die Wahl zwischen links und rechts. Tipps zeigen während Raubzug und Standphase, wann wie viele neue Arbeiterinnen schlüpfen; die täglichen Verluste werden so vom Nachwuchs sichtbar mehr als ausgeglichen. Ein neues Wanderameisen-Volk startet kurz vor dem ersten Schlupf, statt erst eine Woche lang nur Ameisen zu verlieren."],
+  ["v1.16", "Kapitel 4 zum Mitmachen: 👆 Fliehende Grillen, Schaben und Spinnen vor der Schwarmfront antippen – dann schnappen die Soldatinnen sie (sonst holt sie ein Ameisenvogel). 🎯 Auf dem Waldboden liegen Ziele – Termitenhügel, fremde Ameisennester und Wespennester; antippen, Beute und Verluste abwägen und zum Ziel des nächsten Raubzugs machen. 🌙 Jeden Abend der Wanderphase wählst du den Biwakplatz: gleich nebenan (ungeschützt bei Regen), zwischen Brettwurzeln oder im hohlen Baumstamm weit im frischen Jagdgebiet (langer Weg). 🌀 Läuft ein Trupp in der Ameisenmühle im Kreis, ziehst du mit dem Finger eine neue Duftspur zum Biwak und rettest ihn. 👑 Und Kapitel 4 hat ein Ziel: Ab 250.000 Arbeiterinnen teilt sich das Volk – mit eigenem Film."],
 ];
 const SAVE_KEY = SK("ameisen-tycoon-save-v4" + (WALD ? "-wald" : ARMY ? "-schwarm" : REGEN ? "-regen" : ""));
 
@@ -13327,12 +13328,15 @@ function bivouacImage() {
 function drawBivouacAt(u, k, cutaway) {
   const R = bivR() * Math.sqrt(Math.max(0.05, k)), v = 0.14, x = u + S.x * v, y = S.y * v;
   const B0 = bivouacImage(), f = R / B0.R, B = { c: B0.c, cx: B0.cx * f, base: B0.base * f, w: B0.w * f, h: B0.h * f, H: B0.H * f };
+  const camp = campKindAt(u);
+  if (camp === "log") {
   // umgestürzter Stamm, unter dem das Biwak hängt
   const L = R * 1.9, ly = y - B.H * 0.92, lg = ctx.createLinearGradient(0, ly - 16, 0, ly + 16); lg.addColorStop(0, "#7a5a3a"); lg.addColorStop(0.5, "#4e3420"); lg.addColorStop(1, "#2a1a0e");
   ctx.save(); ctx.fillStyle = lg; ctx.beginPath(); ctx.roundRect(x - L, ly - 14, L * 2, 28, 14); ctx.fill();
   ctx.fillStyle = "#6a8a3a"; for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.ellipse(x - L * 0.85 + i * L * 0.21, ly - 13, 10, 3.5, 0, 0, 7); ctx.fill(); }
   ctx.fillStyle = "#8a6a46"; ctx.beginPath(); ctx.ellipse(x + L, ly, 7, 14, 0, 0, 7); ctx.fill(); ctx.strokeStyle = "rgba(60,40,20,.6)"; for (let k2 = 1; k2 < 4; k2++) { ctx.beginPath(); ctx.ellipse(x + L, ly, k2 * 2, k2 * 4, 0, 0, 7); ctx.stroke(); }
   ctx.restore();
+  } else drawCampProps(x, y, R, B, camp);
   ell(x + 8, y + 3, R * 1.1, R * 0.22, 0, "rgba(0,0,0,.3)");
   ctx.drawImage(B.c, x - B.cx, y - B.base, B.w, B.h);
   const t = realTime;                                                                         // Ameisen krabbeln auf der Oberfläche
@@ -13537,26 +13541,33 @@ function setupArmy() {
 }
 function armyTip() {
   const s = armyState();
+  if (AMILL.on) return L("🌀 Ameisenmühle! Zieh mit dem Finger eine Spur vom Kreis bis zum Biwak, um die Ameisen zu retten.", "🌀 Ant mill! Drag your finger from the circle to the bivouac to rescue the ants.");
+  if (AX.site) return L("🌙 Wähle unten, wo das neue Biwak hin soll.", "🌙 Choose below where the new bivouac should go.");
+  if (s.pop >= ARMY_SPLIT) return L("👑 Dein Volk ist groß genug, um sich zu teilen! Öffne das Ausbau-Menü: „Kolonie teilen“.", "👑 Your colony is big enough to split! Open the upgrade menu: “Split the colony”.");
+  if (AX.catch.length) return L("👆 Schnell! Tippe die fliehenden Tiere vor der Front an – sonst holen sie die Ameisenvögel.", "👆 Quick! Tap the fleeing animals ahead of the front – or the antbirds get them.");
   if (MIG.on) return L("🌙 Umzug bei Nacht: Die Arbeiterinnen tragen alle Larven zum neuen Biwak, irgendwann folgt die Königin im Schutz der Soldatinnen.", "🌙 Moving by night: the workers carry all the larvae to the new bivouac, and at some point the queen follows, guarded by soldiers.");
   const buy = UNLOCKS.find(u => !unlocked[u.id] && u.req() && colony.food >= u.cost);
   if (buy) return L(`Du kannst jetzt „${buy.name}“ freischalten!`, `You can unlock “${trStr(buy.name)}” now!`);
   const hi = hatchInfo();
+  const tg = s.tgt && armyTargets().find(o => o.id === s.tgt);
+  if (tg && !RAID.on) { const T = TGT_T[tg.type], r = tgtReach(tg); return r.far ? L(`🎯 Ziel ${T.icon} ${T.de} ist noch zu weit – dein Volk zieht nachts näher heran.`, `🎯 Target ${T.icon} ${T.en} is still too far – your colony moves closer each night.`) : L(`🎯 Ziel ${T.icon} ${T.de} ist in Reichweite – der nächste Raubzug greift an.`, `🎯 Target ${T.icon} ${T.en} is within reach – the next raid attacks.`); }
+  if (!RAID.on && !s.tgtDone && !colony.flags.tgtHint && armyTargets().length) { colony.flags.tgtHint = 1; toast(L("🎯 Auf dem Waldboden gibt es lohnende Ziele: Termitenhügel, fremde Ameisennester und Wespennester. Tippe eines an, um es zum Ziel des nächsten Raubzugs zu machen!", "🎯 There are worthwhile targets on the forest floor: termite mounds, rival ant nests and wasp nests. Tap one to make it the target of the next raid!")); }
   if (RAID.on) return L(`⚔️ Der Raubzug läuft – bisher ${fmtN(RAID.gain || 0)} Beute. Die Beute füttert die Brut: In ${hi.days} ${hi.days === 1 ? "Tag" : "Tagen"} schlüpfen etwa ${fmtN(hi.n)} neue Arbeiterinnen.`, `⚔️ The raid is on – ${fmtN(RAID.gain || 0)} prey so far. The prey feeds the brood: in ${hi.days} ${hi.days === 1 ? "day" : "days"} about ${fmtN(hi.n)} new workers will hatch.`);
   const ci = clamp(Math.floor((s.u - WX0) / CELL_W), 0, ARMY_CELLS - 1), reach = Math.max(2, Math.ceil(raidLen() / CELL_W));
   let sum = 0, n = 0; for (let i = 1; i <= reach; i++) { const j = ci + i * s.raidDir; if (j < 0 || j >= ARMY_CELLS) break; sum += s.cells[j]; n++; }
   if ((A.hungerT || n === 0 || sum / n < 0.35) && preyAhead(-s.raidDir) > preyAhead(s.raidDir) + 0.1) return L("🧭 In dieser Richtung gibt es kaum noch Beute. Tippe unten auf den Raubzug-Knopf und wechsle die Richtung – dort hat sich die Gegend erholt.", "🧭 There's hardly any prey left in this direction. Tap the raid button below to switch direction – the forest floor there has recovered.");
   const dCreek = (armyCreekU() - s.u) * s.raidDir;
-  if (!unlocked.livebridge && dCreek > 0 && dCreek < raidLen() && colony.food < 380) return L("🌊 Der Bach stoppt die Schwarmfront. Mit der Anpassung „Lebende Brücken“ kommt dein Volk hinüber – oder wechsle die Richtung.", "🌊 The creek stops the swarm front. With the adaptation “Living bridges” your colony can cross – or switch direction.");
+  if (!unlocked.livebridge && dCreek > 0 && dCreek < raidLen() && colony.food < 380 && preyAhead(s.raidDir) < 0.35) return L("🌊 Der Bach stoppt die Schwarmfront. Mit der Anpassung „Lebende Brücken“ kommt dein Volk hinüber – oder wechsle die Richtung.", "🌊 The creek stops the swarm front. With the adaptation “Living bridges” your colony can cross – or switch direction.");
   const next = UNLOCKS.find(u => !unlocked[u.id] && u.req());
   if (next) return colony.food >= next.cost ? L(`Du kannst jetzt „${next.name}“ freischalten!`, `You can unlock “${trStr(next.name)}” now!`) : L(`Spare Beute für „${next.name}“ (${next.cost} 🦗).`, `Save up prey for “${trStr(next.name)}” (${next.cost} 🦗).`);
   if (s.phase === "stat") return L(`🏕️ Standphase (Tag ${s.pday}/${ARMY_STAT}): Die Königin legt Zehntausende Eier, die Puppen reifen. In ${hi.days} ${hi.days === 1 ? "Tag" : "Tagen"} schlüpfen etwa ${fmtN(hi.n)} neue Arbeiterinnen.`, `🏕️ Stationary phase (day ${s.pday}/${ARMY_STAT}): the queen lays tens of thousands of eggs while the pupae mature. In ${hi.days} ${hi.days === 1 ? "day" : "days"} about ${fmtN(hi.n)} new workers will hatch.`);
   const lock = UNLOCKS.find(u => !unlocked[u.id]);
   if (lock) return L(`Lass dein Volk weiter wachsen – „${lock.name}“: ${lock.reqTxt}.`, `Keep growing your colony – “${trStr(lock.name)}”: ${trStr(lock.reqTxt)}.`);
-  return L("⚔️ Alle Anpassungen sind freigeschaltet – dein Wanderameisen-Volk ist der Schrecken des Waldbodens. Lass es weiter wachsen!", "⚔️ All adaptations are unlocked – your army ant colony is the terror of the forest floor. Keep it growing!");
+  return L(`⚔️ Alle Anpassungen sind freigeschaltet. Das große Ziel: ${fmtN(ARMY_SPLIT)} Arbeiterinnen – dann teilt sich dein Volk.`, `⚔️ All adaptations are unlocked. The great goal: ${fmtN(ARMY_SPLIT)} workers – then your colony splits.`);
 }
 // v1.15: Wie viel Beute liegt in einer Richtung noch? (der Bach versperrt ohne lebende Brücken den Weg)
-function preyAhead(dir) {
-  const s = armyState(), ci = clamp(Math.floor((s.u - WX0) / CELL_W), 0, ARMY_CELLS - 1), reach = Math.max(2, Math.ceil(raidLen() / CELL_W)), dc = (armyCreekU() - s.u) * dir;
+function preyAhead(dir, u0) {
+  const s = armyState(), u = u0 ?? s.u, ci = clamp(Math.floor((u - WX0) / CELL_W), 0, ARMY_CELLS - 1), reach = Math.max(2, Math.ceil(raidLen() / CELL_W)), dc = (armyCreekU() - u) * dir;
   let sum = 0, n = 0; for (let i = 1; i <= reach; i++) { const j = ci + i * dir; if (j < 0 || j >= ARMY_CELLS) break; if (!unlocked.livebridge && dc > 0 && i * CELL_W > dc) break; sum += s.cells[j]; n++; }
   return n ? sum / n * Math.min(1, n / reach * 1.5) : 0;
 }
@@ -13610,11 +13621,12 @@ const RAIDEV = [];
 function raidEventsTick(dt) {
   if (!RAID.on) { RAIDEV.length = 0; return; }
   const s = armyState(), U = s.u + RAID.dir * RAID.front;
-  if (!RAID.evChecked && RAID.front > RAID.len * 0.55) { RAID.evChecked = true;
+  if (!RAID.evChecked && !RAID.tgtEv && RAID.front > RAID.len * 0.55) { RAID.evChecked = true;
     if (unlocked.wasps && Math.random() < 0.55) RAIDEV.push({ type: "wasp", u: U + RAID.dir * 20, v: 0.22, t: 0, n: 0 });
     else if (unlocked.antnest && Math.random() < 0.55) RAIDEV.push({ type: "ants", u: U + RAID.dir * 20, v: 0.16, t: 0, n: 0 }); }
   for (const e of RAIDEV) { e.t += dt;
-    if (e.type === "wasp") {
+    if (e.type === "termite") termiteEvTick(e, s, dt);
+    else if (e.type === "wasp") {
       if (e.t > 0.5 && !e.toast) { e.toast = 1; toast("🐝 Die Front erreicht ein Papierwespen-Nest! Die Ameisen klettern den Stängel hinauf, die Wespen stechen zu – und verlassen am Ende ihr Nest. Die Brut gehört den Ameisen."); }
       if (e.t > 3 && e.t < 14 && Math.random() < dt * 2.2) { RAID.carriers.push({ p: PREY[5], u: e.u, off: rnd(-0.04, 0.04) }); e.n++; }
       if (e.t > 3 && e.t < 12 && Math.random() < dt * 3) { const loss = Math.round(rnd(20, 60) * (unlocked.soldiers ? 0.6 : 1)); s.pop -= loss; s.lost += loss; e.dead = (e.dead || 0) + loss; } }
@@ -13626,7 +13638,8 @@ function raidEventsTick(dt) {
 }
 function drawRaidEvents() {
   for (const e of RAIDEV) { const x = e.u + S.x * e.v, y = S.y * e.v, t = realTime;
-    if (e.type === "wasp") {                                                                    // Papiernest an einem Stängel, Wespen schwirren
+    if (e.type === "termite") drawTermiteMound(x, y, e, t);
+    else if (e.type === "wasp") {                                                                    // Papiernest an einem Stängel, Wespen schwirren
       ctx.strokeStyle = "#5a7a34"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x - 6, y - 40, x + 4, y - 70); ctx.stroke();
       const k = e.t > 14 ? 0.6 : 1, ny = y - 62; const pg = ctx.createRadialGradient(x - 3, ny - 4, 1, x, ny, 14); pg.addColorStop(0, "#d8ccb4"); pg.addColorStop(1, "#8a7e6a"); ctx.fillStyle = pg; ctx.beginPath(); ctx.ellipse(x + 3, ny, 11, 13 * k, 0.1, 0, 7); ctx.fill();
       ctx.strokeStyle = "rgba(90,80,60,.6)"; ctx.lineWidth = 0.7; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.ellipse(x + 3, ny - 8 + i * 4, 10 - Math.abs(i - 2) * 2, 1.2, 0, 0, 7); ctx.stroke(); }
@@ -13666,8 +13679,7 @@ function millTick(dt) {
     if (Math.random() < 0.45) { Object.assign(AMILL, { on: true, u: s.u + RAID.dir * RAID.front * rnd(0.35, 0.75), t: 0, group: Math.round(s.pop * rnd(0.008, 0.02)), lost: 0 });
       toast("🌀 Der Regen hat die Duftspur weggewaschen! Ein abgeschnittener Trupp folgt nur noch der Ameise vor sich – und läuft im Kreis. Eine Ameisenmühle: Sie laufen, bis sie vor Erschöpfung sterben."); } }
   if (!AMILL.on) return;
-  AMILL.t += dt; const die = AMILL.group * dt / AMILL.dur, real = Math.min(die, AMILL.group - AMILL.lost); AMILL.lost += real; s.pop -= real; s.lost += real;
-  if (AMILL.t >= AMILL.dur) { AMILL.on = false; AMILL.fade = 30; toast(`🌀 Die Ameisenmühle steht still. ${fmtN(AMILL.lost)} Arbeiterinnen sind im Kreis gelaufen, bis sie starben.`); }
+  // v1.16: Fortschritt der Mühle läuft in Echtzeit (millRealTick), damit man sie auch bei 8× noch retten kann
 }
 function drawMill() {
   if (AMILL.fade > 0 && !AMILL.on) AMILL.fade -= 1 / 60;
@@ -13691,6 +13703,360 @@ function drawMill() {
   const _mt3 = migrationTick; migrationTick = function (dt) { const was = MIG.on; _mt3(dt); if (!was && MIG.on) { const s = armyState(), uc = armyCreekU(), fix = to => clamp(to, WX0 + 260, W - 260);
       if (crossesCreek(MIG.from, MIG.to) && !unlocked.livebridge) { s.raidDir *= -1; MIG.to = fix(MIG.from + s.raidDir * 340); if (crossesCreek(MIG.from, MIG.to)) MIG.to = MIG.from + Math.sign(MIG.from - uc) * 120; }
       if (Math.abs(MIG.to - uc) < 170) MIG.to = uc + Math.sign(MIG.to - uc || 1) * 170; } }; }
+
+// =====================================================================
+//  v1.16 Kapitel 4, Etappe 4: zum Mitmachen – Beute antippen, Raubzug-Ziele, Biwakplatz wählen, Ameisenmühle retten, Koloniespaltung
+// =====================================================================
+const ARMY_SPLIT = 250000;                                                                      // ab so vielen Arbeiterinnen teilt sich das Volk
+const AX = { catch: [], fx: [], trail: null, rescue: null, nextCatch: 1.5, site: null };
+const scrPt = (wx, wy) => [(wx - cam.x) * cam.zoom + VW / 2, (wy - cam.y) * cam.zoom + VH / 2];
+const scrD = (wx, wy, sx, sy) => { const [px, py] = scrPt(wx, wy); return Math.hypot(px - sx, py - sy); };
+const axFx = (x, y, txt, col = "#ffe9a8") => AX.fx.push({ x, y, txt, col, t: 0 });
+const armyDay = () => Math.floor(simTime / DAY_LEN + 0.25);
+(() => { const st = document.createElement("style"); st.textContent = `
+  .axPanel { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); width: min(520px, calc(100vw - 24px)); padding: 12px 14px; border-radius: 16px; z-index: 7; font-size: 13.5px; line-height: 1.4; }
+  .axPanel h4 { margin: 0 0 4px; font-size: 15.5px; } .axPanel .sub { opacity: .8; margin-bottom: 2px; }
+  .axPanel .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 9px; } .axPanel .row > button { flex: 1 1 120px; }
+  .axPanel .opt { text-align: left; padding: 9px 10px; line-height: 1.32; font-weight: 600; } .axPanel .opt small { display: block; font-weight: 400; opacity: .85; margin-top: 3px; }
+  .axPanel .cd { margin-top: 7px; font-size: 12px; opacity: .7; } .axPanel .st { margin-top: 6px; }
+  .axPanel button { display: block; width: auto; margin: 0; background: rgba(240,181,90,.14); border: 1px solid rgba(255,215,150,.35); color: inherit; border-radius: 11px; padding: 8px 11px; font: inherit; font-weight: 600; cursor: pointer; }
+  .axPanel button:hover { background: rgba(240,181,90,.3); } .axPanel .row > button.pri { background: rgba(240,181,90,.88); color: #1e150c; border-color: transparent; }`; document.head.appendChild(st); })();
+function axPanel(id) { let el = document.getElementById(id); if (!el) { el = document.createElement("div"); el.id = id; el.className = "glass ui axPanel"; el.addEventListener("pointerdown", e => e.stopPropagation()); document.body.appendChild(el); } return el; }
+const closeAx = id => { const el = document.getElementById(id); if (el) el.remove(); };
+
+// ---------- 1) Fliehende Beute antippen ----------
+const CATCH_KINDS = [["cricket", 4], ["roach", 5], ["spider", 6]];
+function catchTick(rdt) {
+  if (!RAID.on) { AX.catch.length = 0; return; }
+  if (film || !speed) return;
+  const s = armyState(), U = s.u + RAID.dir * RAID.front;
+  AX.nextCatch -= rdt;
+  if (AX.nextCatch <= 0 && RAID.front > 40 && AX.catch.length < 3) {
+    AX.nextCatch = rnd(2, 4);
+    const [kind, v] = pick(CATCH_KINDS);
+    AX.catch.push({ u: U + RAID.dir * rnd(14, 36), v: rnd(0.1, 0.3), kind, val: v + Math.round(Math.sqrt(s.pop / 60000) * 2), t: 0, life: 4.5, h: 0, dir: RAID.dir, sp: rnd(16, 26) });
+    if (!colony.flags.catchHint) { colony.flags.catchHint = 1; toast(L("👆 Vor der Schwarmfront fliehen Grillen, Schaben und Spinnen. Tippe sie an – dann schnappen deine Soldatinnen sie, bevor die Ameisenvögel sie holen!", "👆 Crickets, roaches and spiders flee ahead of the swarm front. Tap them – your soldiers grab them before the antbirds do!")); }
+  }
+  for (let i = AX.catch.length - 1; i >= 0; i--) { const c = AX.catch[i]; c.t += rdt; c.u += c.dir * c.sp * rdt; c.h = Math.abs(Math.sin(c.t * 4.5)) * 16;
+    if (c.t > c.life) { AX.catch.splice(i, 1); axFx(c.u + S.x * c.v, S.y * c.v - 24, "🐦", "#cfe8ff"); RAID.stolen = (RAID.stolen || 0) + 1; } }
+}
+function drawCatch() {
+  const t = realTime, z = Math.max(0.6, cam.zoom);
+  for (const c of AX.catch) {
+    const x = c.u + S.x * c.v, y = S.y * c.v - c.h, pulse = 0.5 + 0.5 * Math.sin(t * 8), urgent = c.t > c.life - 1.4;
+    ctx.save(); ctx.strokeStyle = urgent ? `rgba(255,120,90,${0.55 + pulse * 0.45})` : `rgba(255,236,160,${0.45 + pulse * 0.45})`; ctx.lineWidth = 2.5 / z;
+    ctx.beginPath(); ctx.arc(x, y - 4, 17 + pulse * 3, 0, 7); ctx.stroke();
+    const gl = ctx.createRadialGradient(x, y - 4, 2, x, y - 4, 18); gl.addColorStop(0, "rgba(255,244,200,.75)"); gl.addColorStop(1, "rgba(255,236,170,0)"); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(x, y - 4, 18, 0, 7); ctx.fill(); ctx.restore();   // heller Schein, damit man das Tier auf dem dunklen Boden sieht
+    ctx.save(); ctx.translate(x, y); ctx.scale(2.2 * c.dir, 2.2); drawPrey(0, 0, { n: c.kind, c: c.kind === "spider" ? [60, 50, 44] : [90, 70, 40], s: 1 }); ctx.restore();
+    const [sx, sy] = scrPt(x, y - 4);                                                                // außerhalb des Bildes: Hinweis am Rand, Antippen holt die Kamera hin
+    if (sx < 30 || sx > VW - 30 || sy < 60 || sy > VH - 96) {
+      const ex = clamp(sx, 40, VW - 40), ey = clamp(sy, 72, VH - 108), [wx, wy] = toWorld(ex, ey); c._edge = [ex, ey];
+      ctx.save(); ctx.fillStyle = `rgba(20,13,7,${0.7 + pulse * 0.2})`; ctx.strokeStyle = "rgba(255,226,140,.9)"; ctx.lineWidth = 2 / cam.zoom; ctx.beginPath(); ctx.arc(wx, wy, 19 / cam.zoom, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.font = `${17 / cam.zoom}px system-ui, sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("🦗", wx, wy + 1 / cam.zoom); ctx.restore();
+    } else c._edge = null;
+  }
+}
+function tryCatch(sx, sy) {
+  let best = null, bd = 46;
+  for (const c of AX.catch) { const d = scrD(c.u + S.x * c.v, S.y * c.v - c.h - 4, sx, sy); if (d < bd) { bd = d; best = c; } }
+  if (!best) { for (const c of AX.catch) if (c._edge && Math.hypot(c._edge[0] - sx, c._edge[1] - sy) < 34) { cam.x = c.u + S.x * c.v; cam.y = S.y * c.v - 40; clampCam(); return true; } return false; }
+  AX.catch.splice(AX.catch.indexOf(best), 1);
+  const s = armyState(), v = best.val, x = best.u + S.x * best.v, y = S.y * best.v;
+  colony.food += v; s.caught += v; RAID.gain = (RAID.gain || 0) + v; s.tapped = (s.tapped || 0) + 1;
+  axFx(x, y - 26, "+" + v + " 🦗");
+  for (let i = 0; i < 12; i++) parts.push({ x, y: y - 4, vx: rnd(-45, 45), vy: rnd(-70, -10), life: 0.7, c: "#ffe28a", s: rnd(0.8, 1.6) });
+  try { sfx.ui(); } catch (e) {}
+  return true;
+}
+function drawAxFx() {
+  const z = Math.max(0.6, cam.zoom);
+  for (const f of AX.fx) { const a = clamp(1.4 - f.t, 0, 1); ctx.save(); ctx.globalAlpha = a; ctx.font = `bold ${17 / z}px system-ui, sans-serif`; ctx.textAlign = "center"; ctx.lineWidth = 3 / z; ctx.strokeStyle = "rgba(20,10,4,.8)";
+    ctx.strokeText(f.txt, f.x, f.y - f.t * 26); ctx.fillStyle = f.col; ctx.fillText(f.txt, f.x, f.y - f.t * 26); ctx.restore(); }
+}
+
+// ---------- 2) Raubzug-Ziele auf dem Waldboden ----------
+const TGT_T = {
+  termite: { icon: "🏔️", de: "Termitenhügel", en: "Termite mound", gain: 95, loss: 150, need: null,
+    dde: "Termiten sind fette Beute – aber ihre Soldaten verteidigen jeden Gang mit harten Köpfen.", den: "Termites are rich prey – but their soldiers defend every tunnel with hard heads." },
+  ants: { icon: "🐜", de: "Fremdes Ameisennest", en: "Rival ant nest", gain: 145, loss: 350, need: "antnest",
+    dde: "Die Front bricht ins Nest ein und trägt Larven und Puppen fort. Die Verteidigerinnen kämpfen bis zuletzt.", den: "The front breaks into the nest and carries off larvae and pupae. The defenders fight to the last." },
+  wasp: { icon: "🐝", de: "Papierwespen-Nest", en: "Paper wasp nest", gain: 330, loss: 700, need: "wasps",
+    dde: "Wespenbrut ist die fetteste Beute im Wald – doch die Stiche kosten viele Ameisen das Leben.", den: "Wasp brood is the richest prey in the forest – but the stings cost many ants their lives." },
+};
+function armyTargets() { const s = armyState(); if (!s.targets) s.targets = []; return s.targets; }
+function spawnTarget() {
+  const s = armyState(), T = armyTargets();
+  for (let tries = 0; tries < 40; tries++) {
+    const u = rnd(WX0 + 320, W - 320);
+    if (Math.abs(u - s.u) < 170 || Math.abs(u - armyCreekU()) < creekW() + 80 || T.some(o => Math.abs(o.u - u) < 190)) continue;
+    const have = T.map(o => o.type), pool = ["termite", "ants", "wasp"].filter(k => !have.includes(k)), type = pool.length ? pick(pool) : "termite";
+    T.push({ id: (s.tgtId = (s.tgtId || 0) + 1), type, u, v: type === "wasp" ? 0.22 : rnd(0.12, 0.2) }); return;
+  }
+}
+function targetTick() {
+  const s = armyState(), T = armyTargets(), day = armyDay();
+  if (T.length < 3 && s.tgtDay !== day) { s.tgtDay = day; spawnTarget(); }
+  if (s.tgt) { const g = T.find(o => o.id === s.tgt); if (!g) s.tgt = null; else s.raidDir = Math.sign(g.u - s.u) || 1; }
+}
+const tgtReach = g => { const s = armyState(); return { dist: Math.abs(g.u - s.u), blocked: !unlocked.livebridge && crossesCreek(s.u, g.u), far: Math.abs(g.u - s.u) > raidLen() }; };
+function drawTargets() {
+  const s = armyState(), t = realTime, z = Math.max(0.7, cam.zoom);
+  for (const g of armyTargets()) {
+    if (RAIDEV.some(e => e.tgt === g.id)) { g._sx = null; continue; }
+    const x = g.u + S.x * g.v, y = S.y * g.v, T = TGT_T[g.type], locked = T.need && !unlocked[T.need], sel = s.tgt === g.id;
+    if (g.type === "termite") drawTermiteMound(x, y, null, t); else if (g.type === "wasp") drawWaspNestStatic(x, y, t); else drawAntNestStatic(x, y, t);
+    const sy = y - (g.type === "wasp" ? 98 : g.type === "termite" ? 76 : 34) - (sel ? 8 + Math.sin(t * 4) * 4 : 0), k = 1.2 / z;
+    ctx.save(); ctx.translate(x, sy); ctx.scale(k, k);
+    ctx.fillStyle = sel ? "rgba(240,181,90,.96)" : "rgba(20,13,7,.8)"; ctx.strokeStyle = "rgba(255,215,150,.7)"; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.roundRect(-18, -16, 36, 27, 9); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-5, 11); ctx.lineTo(5, 11); ctx.lineTo(0, 18); ctx.closePath(); ctx.fill();
+    ctx.font = "17px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(locked ? "🔒" : sel ? "🎯" : T.icon, 0, -2.5); ctx.restore();
+    g._sx = x; g._sy = sy;
+  }
+}
+function drawTermiteMound(x, y, e, t) {
+  const k = e && e.t > 13 ? 0.72 : 1, g = ctx.createLinearGradient(0, y - 64, 0, y); g.addColorStop(0, "#c2945e"); g.addColorStop(1, "#7a5432");
+  ctx.save(); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 27, y + 2); ctx.quadraticCurveTo(x - 21, y - 30 * k, x - 9, y - 58 * k); ctx.quadraticCurveTo(x - 3, y - 67 * k, x + 4, y - 52 * k);
+  ctx.quadraticCurveTo(x + 9, y - 41 * k, x + 14, y - 46 * k); ctx.quadraticCurveTo(x + 21, y - 22 * k, x + 29, y + 2); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "rgba(70,44,22,.4)"; ctx.lineWidth = 1; for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.moveTo(x - 18 + i * 6, y - 3); ctx.lineTo(x - 15 + i * 5, y - 20 - (i % 3) * 9 * k); ctx.stroke(); }
+  ctx.restore(); ell(x - 4, y - 19 * k, 2.4, 3, 0, "#3a2414"); ell(x + 10, y - 9, 2, 2.4, 0, "#3a2414");
+  if (!e) return;
+  for (let i = 0; i < 14; i++) { const a = i * 0.8 + t, d = 10 + (i % 4) * 6; drawEci(x + Math.cos(a) * d * 1.3, y - 4 + Math.sin(a) * 4 - (i % 3) * 9, i % 4 ? "media" : "soldier", Math.cos(a) > 0 ? -1 : 1, Math.floor(t * 12 + i) % 3, 1); }
+  if (e.t < 11) for (let i = 0; i < 8; i++) { const a = -i * 0.9 + t * 1.6, px = x + Math.cos(a) * 19, py = y - 2 + Math.sin(a) * 3; ell(px, py, 2.4, 1.3, 0, "#f0e2c0"); ell(px + 2.4, py - 0.4, 1.5, 1.3, 0, "#c87a30"); }   // Termitensoldaten mit orangem Kopf
+}
+function drawWaspNestStatic(x, y, t) {
+  ctx.save(); ctx.strokeStyle = "#5a7a34"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x - 6, y - 40, x + 4, y - 70); ctx.stroke();
+  const ny = y - 62, pg = ctx.createRadialGradient(x - 3, ny - 4, 1, x, ny, 14); pg.addColorStop(0, "#d8ccb4"); pg.addColorStop(1, "#8a7e6a"); ctx.fillStyle = pg; ctx.beginPath(); ctx.ellipse(x + 3, ny, 11, 13, 0.1, 0, 7); ctx.fill();
+  ctx.strokeStyle = "rgba(90,80,60,.6)"; ctx.lineWidth = 0.7; for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.ellipse(x + 3, ny - 8 + i * 4, 10 - Math.abs(i - 2) * 2, 1.2, 0, 0, 7); ctx.stroke(); }
+  ctx.restore();
+  for (let i = 0; i < 3; i++) { const wx = x + Math.sin(t * 2 + i * 2) * 18, wy = ny + Math.cos(t * 2.6 + i) * 12 - 6; ell(wx, wy, 3.4, 1.4, 0.2, "#c8a020"); ell(wx + 2.5, wy, 1.6, 1.4, 0, "#2a2010"); }
+}
+function drawAntNestStatic(x, y, t) {
+  ell(x, y + 1, 26, 7, 0, "rgba(90,50,24,.85)"); ell(x, y, 6, 3, 0, "#140804"); ell(x + 14, y + 2, 4, 2, 0, "#140804");
+  for (let i = 0; i < 5; i++) { const a = -i * 1.3 + t * 0.9, px = x + Math.cos(a) * 16, py = y + Math.sin(a) * 4; ell(px, py, 2.2, 1.2, 0, "#b8301a"); ell(px + 2, py - 0.5, 1.2, 1, 0, "#8a2010"); }
+}
+function termiteEvTick(e, s, dt) {
+  if (e.t > 0.5 && !e.toast) { e.toast = 1; toast(L("🏔️ Die Front erreicht den Termitenhügel! Die Ameisen brechen durch die harte Lehmwand – die Termitensoldaten verteidigen jeden Gang mit ihren Köpfen.", "🏔️ The front reaches the termite mound! The ants break through the hard clay wall – the termite soldiers defend every tunnel with their heads.")); }
+  if (e.t > 2 && e.t < 12 && Math.random() < dt * 2.4) { RAID.carriers.push({ p: { n: "Termite", v: 4, c: [240, 226, 192], s: 0.9 }, u: e.u, off: rnd(-0.04, 0.04) }); e.n++; }
+  if (e.t > 2 && e.t < 10 && Math.random() < dt * 1.5) { const loss = Math.round(rnd(8, 18) * (unlocked.soldiers ? 0.6 : 1)); s.pop -= loss; s.lost += loss; e.dead = (e.dead || 0) + loss; }
+  if (e.t > 15 && !e.done) { e.done = 1; toast(L(`🏔️ Der Termitenhügel ist geplündert. ${fmtN(e.dead || 0)} Ameisen fielen im Kampf.`, `🏔️ The termite mound has been plundered. ${fmtN(e.dead || 0)} ants fell in battle.`)); }
+}
+function tryTarget(sx, sy) {
+  let best = null, bd = 42;
+  for (const g of armyTargets()) { if (g._sx == null) continue; const d = Math.min(scrD(g._sx, g._sy, sx, sy), scrD(g.u + S.x * g.v, S.y * g.v - 18, sx, sy)); if (d < bd) { bd = d; best = g; } }
+  if (!best) return false; openTargetPanel(best); return true;
+}
+function openTargetPanel(g) {
+  const s = armyState(), T = TGT_T[g.type], locked = T.need && !unlocked[T.need], r = tgtReach(g), un = locked && UNLOCKS.find(u => u.id === T.need), sel = s.tgt === g.id;
+  const loss = Math.round(T.loss * (unlocked.soldiers ? 0.6 : 1)), el = axPanel("axTgt");
+  const st = locked ? L(`🔒 Dafür braucht dein Volk die Anpassung „${un.name}“.`, `🔒 Your colony needs the adaptation “${trStr(un.name)}” for this.`)
+    : r.blocked ? L("🌊 Der Bach liegt dazwischen – erst mit „Lebende Brücken“ erreichbar.", "🌊 The creek is in the way – only reachable with “Living bridges”.")
+    : r.far ? L("📏 Noch zu weit für einen Raubzug. Wählst du es trotzdem, zieht dein Volk nachts in diese Richtung, bis es nah genug ist.", "📏 Still too far for a raid. If you choose it anyway, your colony moves this way each night until it is close enough.")
+    : L("✅ In Reichweite – der nächste Raubzug greift an.", "✅ Within reach – the next raid will attack.");
+  el.innerHTML = `<h4>${T.icon} ${L(T.de, T.en)}</h4><div>${L(T.dde, T.den)}</div><div class="st">${L(`Beute etwa <b>+${T.gain} 🦗</b> · Verluste etwa <b>${fmtN(loss)}</b> Ameisen`, `Prey about <b>+${T.gain} 🦗</b> · losses about <b>${fmtN(loss)}</b> ants`)}</div><div class="st">${st}</div><div class="row"></div>`;
+  const row = el.querySelector(".row"), btn = (txt, fn) => { const b = document.createElement("button"); b.textContent = txt; if (!row.children.length) b.className = "pri"; b.onclick = () => { fn(); try { sfx.ui(); } catch (e) {} }; row.appendChild(b); };
+  if (!locked && !r.blocked && !sel) btn(L("🎯 Als Ziel wählen", "🎯 Choose as target"), () => { s.tgt = g.id; s.raidDir = Math.sign(g.u - s.u) || 1; updateRaidBtn(); closeAx("axTgt"); toast(L(`🎯 Ziel gewählt: ${T.de}. Der Raubzug-Knopf unten hebt das Ziel wieder auf.`, `🎯 Target chosen: ${T.en}. The raid button below cancels it again.`)); });
+  if (sel) btn(L("Ziel aufheben", "Cancel target"), () => { s.tgt = null; updateRaidBtn(); closeAx("axTgt"); });
+  btn(L("Schließen", "Close"), () => closeAx("axTgt"));
+}
+{ const urb = updateRaidBtn; updateRaidBtn = function () {
+    const s = armyState(), g = s.tgt && armyTargets().find(o => o.id === s.tgt); if (!g) return urb();
+    const T = TGT_T[g.type], right = g.u > s.u, txt = L(`${right ? "" : "← "}🎯 Ziel: ${T.icon} ${T.de}${right ? " →" : ""}`, `${right ? "" : "← "}🎯 Target: ${T.icon} ${T.en}${right ? " →" : ""}`);
+    if ($("eggBtn").textContent !== txt) $("eggBtn").textContent = txt; }; }
+{ const _rt4 = raidTick; raidTick = function (dt) {
+    const was = RAID.on, s = armyState(); _rt4(dt);
+    if (!was && RAID.on) { RAID.tgtEv = false; RAID.tgtFired = false; AX.nextCatch = 1.2;
+      const g = armyTargets().find(o => o.id === s.tgt); if (g && !tgtReach(g).blocked) { const d = (g.u - s.u) * RAID.dir; if (d > 0 && d <= RAID.len + 5) RAID.tgtEv = true; } }
+    if (RAID.on && RAID.tgtEv && !RAID.tgtFired) { const g = armyTargets().find(o => o.id === s.tgt);
+      if (!g) RAID.tgtEv = false; else if (RAID.front >= (g.u - s.u) * RAID.dir - 10) { RAID.tgtFired = true; RAID.evChecked = true; RAIDEV.push({ type: g.type, u: g.u, v: g.v, t: 0, n: 0, tgt: g.id }); } }
+    for (const e of RAIDEV) if (e.tgt && e.done && !e.cleaned) { e.cleaned = 1; const T = armyTargets(), i = T.findIndex(o => o.id === e.tgt); if (i >= 0) T.splice(i, 1); if (s.tgt === e.tgt) s.tgt = null; s.tgtDone = (s.tgtDone || 0) + 1; updateRaidBtn(); }
+  }; }
+
+// ---------- 3) Biwakplatz für die Nacht wählen ----------
+const SITES = [
+  { k: "open", icon: "🍃", de: "Gleich nebenan", en: "Right next door", dist: 170, lossP: 0,
+    dde: "Kurzer Weg ohne Verluste – aber ungeschützt: Regnet es, spült das Wasser Ameisen fort. In der Trockenzeit die beste Wahl.", den: "A short trip with no losses – but unprotected: if it rains, water washes ants away. The best choice in the dry season." },
+  { k: "roots", icon: "🌳", de: "Zwischen Brettwurzeln", en: "Between buttress roots", dist: 310, lossP: 0.004,
+    dde: "Mittlerer Weg. Die riesigen Wurzeln schützen vor dem Regen.", den: "A medium trip. The huge roots shelter the colony from the rain." },
+  { k: "log", icon: "🪵", de: "Hohler Baumstamm", en: "Hollow log", dist: 460, lossP: 0.012,
+    dde: "Langer Weg durch die Nacht – unterwegs gehen Ameisen verloren. Dafür trocken und weit hinein ins frische Jagdgebiet.", den: "A long trip through the night – some ants get lost on the way. But dry, and far into fresh hunting grounds." },
+];
+function siteTarget(dist) {
+  const s = armyState(), fix = to => clamp(to, WX0 + 260, W - 260), uc = armyCreekU(); let to = fix(s.u + s.raidDir * dist);
+  if (!unlocked.livebridge && crossesCreek(s.u, to)) to = uc - Math.sign(uc - s.u) * 175;
+  if (Math.abs(to - uc) < 170) to = uc + Math.sign(to - uc || 1) * 170;
+  return (to - s.u) * s.raidDir >= 60 ? to : null;
+}
+function siteOptions() { const seen = new Set(); return SITES.map(o => ({ ...o, to: siteTarget(o.dist) })).filter(o => { if (o.to == null) return false; const k = Math.round(o.to / 25); if (seen.has(k)) return false; seen.add(k); return true; }); }
+function openSitePanel() {
+  if (AX.site) return; const s = armyState(); let opts = siteOptions();
+  if (!opts.length) { s.tgt = null; s.raidDir *= -1; opts = siteOptions(); }
+  if (!opts.length) return startMig(clamp(s.u - s.raidDir * 300, WX0 + 260, W - 260), "roots", 0);
+  AX.site = { opts, wait: 0, spBefore: speed }; if (speed > 1) setSpeed(1);                        // beim Wählen auf 1× verlangsamen
+  const dry = seasonInfo().idx === 3, el = axPanel("axSite");
+  el.innerHTML = `<h4>${L("🌙 Wo soll das neue Biwak hin?", "🌙 Where should the new bivouac go?")}</h4><div class="sub">${dry ? L("☀️ Trockenzeit – Regen ist selten.", "☀️ Dry season – rain is rare.") : L("🌧️ Regenzeit – nachts und morgens regnet es oft.", "🌧️ Wet season – it often rains at night and in the morning.")}</div><div class="row"></div><div class="cd"></div>`;
+  const row = el.querySelector(".row");
+  opts.forEach((o, i) => { const p = preyAhead(s.raidDir, o.to), lv = p > 0.55 ? 3 : p > 0.3 ? 2 : 1, lost = Math.round(s.pop * o.lossP);
+    const b = document.createElement("button"); b.className = "opt";
+    b.innerHTML = `${o.icon} ${L(o.de, o.en)} <span style="white-space:nowrap">${"🦗".repeat(lv)}</span><small>${L(o.dde, o.den)}</small><small>${lost ? L(`Unterwegs etwa ${fmtN(lost)} Ameisen verloren`, `About ${fmtN(lost)} ants lost on the way`) : L("Keine Verluste unterwegs", "No losses on the way")}</small>`;
+    b.onclick = () => { chooseSite(i); try { sfx.ui(); } catch (e) {} }; row.appendChild(b); });
+}
+function siteTick(rdt) {
+  const st = AX.site; if (!st) return; if (speed > 0 && !film) st.wait += rdt;
+  const left = Math.max(0, Math.ceil(20 - st.wait)), c = document.querySelector("#axSite .cd");
+  if (c) c.textContent = L(`Wählst du nicht, entscheiden die Ameisen in ${left} s selbst.`, `If you don't choose, the ants decide in ${left} s.`);
+  if (left <= 0 || film) { const i = st.opts.findIndex(o => o.k === "roots"); chooseSite(i >= 0 ? i : 0); }
+}
+function chooseSite(i) {
+  const st = AX.site; if (!st) return; const o = st.opts[i] || st.opts[0]; AX.site = null; closeAx("axSite");
+  if (st.spBefore > 1 && speed === 1) setSpeed(st.spBefore);
+  startMig(o.to, o.k, o.lossP);
+}
+function startMig(to, kind, lossP) {
+  const s = armyState(); Object.assign(MIG, { on: true, done: true, from: s.u, to, k: 0 }); s.nextSite = kind;
+  toast("🌙 Auszug! Das Biwak löst sich auf – in einem stundenlangen Strom tragen die Arbeiterinnen alle Larven zum neuen Lagerplatz. Irgendwann in der Nacht folgt die Königin.");
+  const loss = Math.round(s.pop * lossP); if (loss > 0) { s.pop -= loss; s.lost += loss; toast(L(`🌙 Der lange Weg durch die Nacht: ${fmtN(loss)} Ameisen verlieren die Spur.`, `🌙 The long trip through the night: ${fmtN(loss)} ants lose the trail.`)); }
+}
+{ const _mt4 = migrationTick; migrationTick = function (dt) {
+    const s = armyState(), h = dayInfo().hour, was = MIG.on;
+    if (!MIG.on && s.phase === "nom" && h > 19.2 && h < 23 && !MIG.done && !AX.site) { MIG.done = true; openSitePanel(); }
+    if (AX.site && (h >= 23 || h < 6)) { const i = AX.site.opts.findIndex(o => o.k === "roots"); chooseSite(i >= 0 ? i : 0); }   // läuft das Spiel ohne Bild weiter (anderer Tab), entscheiden die Ameisen spätestens um 23 Uhr
+    _mt4(dt);
+    if (was && !MIG.on) s.site = s.nextSite || "roots";
+  }; }
+function campKindAt(u) { const s = armyState(); if (MIG.on && Math.abs(u - MIG.to) < 1) return s.nextSite || "roots"; return s.site || "log"; }
+function drawCampProps(x, y, R, B, kind) {
+  if (kind === "roots") {                                                                         // Stamm eines Urwaldriesen mit Brettwurzeln (heller Rindenton wie die Bäume im Hintergrund)
+    const tw = R * 0.85, g = ctx.createLinearGradient(x - tw, 0, x + tw, 0); g.addColorStop(0, "#7c8276"); g.addColorStop(0.35, "#d2d6ca"); g.addColorStop(0.7, "#a9aea0"); g.addColorStop(1, "#6c7166");
+    ctx.save(); ctx.fillStyle = g; ctx.fillRect(x - tw * 0.5, y - 3200, tw, 3200 - B.H * 0.6);
+    for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + sd * tw * 0.3, y - B.H - 150); ctx.quadraticCurveTo(x + sd * tw * 0.6, y - B.H * 0.35, x + sd * R * 1.65, y + 3); ctx.lineTo(x + sd * R * 1.28, y + 3);
+      ctx.quadraticCurveTo(x + sd * tw * 0.52, y - B.H * 0.5, x + sd * tw * 0.12, y - B.H * 0.95); ctx.closePath(); ctx.fill(); }
+    for (let i = 0; i < 9; i++) ell(x - tw * 0.3 + (i * 37 % 11) / 11 * tw * 0.6, y - B.H - 40 - i * 70, 6 + (i % 3) * 3, 3, 0, "rgba(230,236,222,.35)");   // Flechten
+    ctx.restore();
+  } else {                                                                                          // offener Waldboden: nur Falllaub ringsum
+    for (let i = 0; i < 16; i++) { const q = (i * 0.618) % 1 * 2 - 1; ell(x + q * R * 1.5, y + 2 + (i % 3), 8, 3, q, i % 2 ? "#8a6a32" : "#6a7a32"); }
+  }
+}
+{ const au = armyUpdate; armyUpdate = function (dt) {
+    au(dt); const s = armyState(), day = armyDay();
+    if (s.site === "open" && colony.rain && !MIG.on && s.rainDay !== day) { s.rainDay = day; const loss = Math.round(s.pop * 0.015); s.pop -= loss; s.lost += loss;
+      toast(L(`🌧️ Regen auf dem offenen Waldboden! Das Wasser spült ${fmtN(loss)} Ameisen aus dem ungeschützten Biwak.`, `🌧️ Rain on the open forest floor! The water washes ${fmtN(loss)} ants out of the unprotected bivouac.`)); }
+    targetTick();
+    if (s.pop >= ARMY_SPLIT && !s.splitHint) { s.splitHint = 1; toast(L(`👑 Dein Volk hat ${fmtN(ARMY_SPLIT)} Arbeiterinnen! Jetzt kann es sich teilen – öffne das Ausbau-Menü: „Kolonie teilen“.`, `👑 Your colony has ${fmtN(ARMY_SPLIT)} workers! Now it can split – open the upgrade menu: “Split the colony”.`)); updateShop(); }
+  }; }
+
+// ---------- 4) Ameisenmühle: eine neue Duftspur zum Biwak ziehen ----------
+function millRealTick(rdt) {
+  if (!AMILL.on || film || !speed) return; const s = armyState(), dt = rdt;
+  if (!AMILL.hinted) { AMILL.hinted = 1;
+    const minD = bivR() * 1.3 + 130; if (Math.abs(AMILL.u - s.u) < minD) AMILL.u = clamp(s.u + (Math.sign(AMILL.u - s.u) || RAID.dir || 1) * minD, WX0 + 120, W - 120);   // nicht direkt am Biwak
+    toast(L("👆 Ameisenmühle! Zieh mit dem Finger eine neue Duftspur vom Kreis bis zum Biwak – dann finden die Ameisen heim.", "👆 Ant mill! Drag your finger to draw a new scent trail from the circle to the bivouac – then the ants find their way home."));
+    if (!follow) { const mx = AMILL.u + S.x * AMILL.v, bx = s.u + S.x * 0.14; cam.x = (mx + bx) / 2; cam.y = S.y * 0.18 - 40; cam.zoom = clamp(VW * 0.75 / (Math.abs(mx - bx) + 260), 0.35, 1.5); clampCam(); } }
+  AMILL.t += dt; const die = AMILL.group * dt / AMILL.dur, real = Math.min(die, AMILL.group - AMILL.lost); AMILL.lost += real; s.pop -= real; s.lost += real;
+  if (AMILL.t >= AMILL.dur) { AMILL.on = false; AMILL.fade = 30; toast(`🌀 Die Ameisenmühle steht still. ${fmtN(AMILL.lost)} Arbeiterinnen sind im Kreis gelaufen, bis sie starben.`); }
+}
+function finishTrail() {
+  const tr = AX.trail; AX.trail = null; if (!tr || !AMILL.on) return;
+  const s = armyState(), P = tr.pts, [lx, ly] = P[P.length - 1], bx = s.u + S.x * 0.14, by = S.y * 0.14 - bivR() * 0.4;
+  if (Math.hypot(lx - bx, ly - by) < bivR() * 1.3 + 40) {
+    const saved = Math.max(0, Math.round(AMILL.group - AMILL.lost)); AMILL.on = false; AMILL.fade = 30; s.rescued = (s.rescued || 0) + saved;
+    AX.rescue = { pts: P.concat([[bx, S.y * 0.14]]), t: 0 };
+    toast(L(`🐜 Gerettet! ${fmtN(saved)} Ameisen folgen deiner neuen Duftspur zurück ins Biwak.`, `🐜 Rescued! ${fmtN(saved)} ants follow your new scent trail back to the bivouac.`)); try { sfx.ui(); } catch (e) {}
+  } else if (P.length > 3) toast(L("👆 Fast! Zieh die Spur ganz bis zum Biwak.", "👆 Almost! Drag the trail all the way to the bivouac."));
+}
+function drawTrail() {
+  const s = armyState();
+  if (AMILL.on && !AX.trail) {                                                                      // gestrichelter Hinweis vom Kreis zum Biwak
+    const mx = AMILL.u + S.x * AMILL.v, my = S.y * AMILL.v, bx = s.u + S.x * 0.14, by = S.y * 0.14 - 10, a = (realTime * 0.5) % 1, z = Math.max(0.5, cam.zoom);
+    ctx.save(); ctx.setLineDash([7 / z, 9 / z]); ctx.lineDashOffset = -realTime * 30; ctx.strokeStyle = "rgba(255,236,160,.6)"; ctx.lineWidth = 2.5 / z; ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]);
+    ctx.font = `${24 / z}px system-ui, sans-serif`; ctx.textAlign = "center"; ctx.fillText("👆", lerp(mx, bx, a), lerp(my, by, a) - 14 / z); ctx.restore();
+  }
+  const P = AX.trail ? AX.trail.pts : AX.rescue ? AX.rescue.pts : null;
+  if (P && P.length > 1) { const al = AX.trail ? 0.9 : Math.max(0, 0.85 - AX.rescue.t / 8); ctx.save(); ctx.strokeStyle = `rgba(255,220,120,${al})`; ctx.lineWidth = 4 / Math.max(0.5, cam.zoom); ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.shadowColor = "rgba(255,200,90,.8)"; ctx.shadowBlur = 8; ctx.beginPath(); P.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); ctx.restore(); }
+  if (AX.rescue) {                                                                                  // die Geretteten laufen die Spur entlang heim
+    const R = AX.rescue, Q = R.pts, Ls = []; let tot = 0; for (let i = 1; i < Q.length; i++) { const d = Math.hypot(Q[i][0] - Q[i - 1][0], Q[i][1] - Q[i - 1][1]); Ls.push(d); tot += d; }
+    for (let j = 0; j < 44; j++) { const qq = R.t * 0.22 - j * 0.03; if (qq < 0 || qq > 1) continue; let q = qq * tot, i = 0; while (i < Ls.length - 1 && q > Ls[i]) { q -= Ls[i]; i++; }
+      const f = Ls[i] ? q / Ls[i] : 0, x = lerp(Q[i][0], Q[i + 1][0], f), y = lerp(Q[i][1], Q[i + 1][1], f); drawEci(x, y, j % 9 ? "media" : "soldier", Q[i + 1][0] >= Q[i][0] ? 1 : -1, Math.floor(realTime * 10 + j) % 3, 1.1); }
+  }
+}
+
+// ---------- Eingabe: antippen und Spur ziehen (die Kamera bleibt beim Ziehen der Spur stehen) ----------
+{ let dn = null;
+  canvas.addEventListener("pointerdown", e => { if (!ARMY || film || !started) return; dn = { x: e.clientX, y: e.clientY, t: performance.now() };
+    if (AMILL.on && scrD(AMILL.u + S.x * AMILL.v, S.y * AMILL.v, e.clientX, e.clientY) < Math.max(64, 54 * cam.zoom)) { const [wx, wy] = toWorld(e.clientX, e.clientY); AX.trail = { pts: [[AMILL.u + S.x * AMILL.v, S.y * AMILL.v], [wx, wy]] }; } }, true);
+  canvas.addEventListener("pointermove", e => { if (!AX.trail) return; drag = null; const [wx, wy] = toWorld(e.clientX, e.clientY), P = AX.trail.pts, l = P[P.length - 1];
+    if (Math.hypot(wx - l[0], wy - l[1]) * cam.zoom > 6) P.push([wx, wy]); if (P.length > 400) P.splice(1, 1); }, true);
+  canvas.addEventListener("pointerup", e => { if (AX.trail) { drag = null; finishTrail(); dn = null; return; } if (!dn) return;
+    const moved = Math.hypot(e.clientX - dn.x, e.clientY - dn.y), quick = performance.now() - dn.t < 450; dn = null; if (moved > 9 || !quick) return;
+    if (!tryCatch(e.clientX, e.clientY)) tryTarget(e.clientX, e.clientY); }, true);
+  canvas.addEventListener("pointercancel", () => { AX.trail = null; dn = null; }, true);
+}
+
+// ---------- 5) Koloniespaltung: das große Ziel von Kapitel 4 ----------
+let splitCard = null;
+function updateSplitCard() {
+  if (!ARMY) return; const s = armyState(), can = s.pop >= ARMY_SPLIT, show = can || (s.splits || 0) > 0;
+  if (!show) { if (splitCard) { splitCard.remove(); splitCard = null; } return; }
+  if (!splitCard) { splitCard = document.createElement("div"); splitCard.className = "card buy flightCard"; $("cards").prepend(splitCard); }
+  const key = can + "|" + (s.splits || 0) + "|" + LANG_KEY(); if (splitCard._k === key) return; splitCard._k = key;
+  splitCard.innerHTML = `<div class="ic">👑</div><div class="bd"><div class="t"></div><div class="d"></div><div class="act"><button></button></div></div>`;
+  splitCard.querySelector(".t").textContent = can ? L("Das Volk teilt sich", "The colony splits") : L("Koloniespaltung (noch einmal ansehen)", "Colony split (watch again)");
+  splitCard.querySelector(".d").textContent = can ? L(`Dein Volk ist mit ${fmtN(s.pop)} Arbeiterinnen riesig geworden. Jetzt zieht es junge Königinnen auf und teilt sich in zwei Völker – das große Ziel von Kapitel 4.`, `With ${fmtN(s.pop)} workers your colony has grown huge. Now it raises young queens and splits into two colonies – the great goal of chapter 4.`)
+    : L(`Dein Volk hat sich schon ${s.splits}× geteilt. Ab ${fmtN(ARMY_SPLIT)} Arbeiterinnen kann es sich wieder teilen.`, `Your colony has already split ${s.splits}×. From ${fmtN(ARMY_SPLIT)} workers on it can split again.`);
+  const b = splitCard.querySelector("button"); b.textContent = can ? L("Kolonie teilen", "Split the colony") : L("Film ansehen", "Watch the film"); b.onclick = () => playSplitFilm(!can);
+}
+const LANG_KEY = () => L("de", "en");
+{ const us2 = updateShop; updateShop = () => { us2(); updateSplitCard(); if (splitCard && armyState().pop >= ARMY_SPLIT) { const b = $("shopBadge"); b.textContent = (+b.textContent || 0) + 1; b.classList.add("has"); } }; }
+function playSplitFilm(rewatch) {
+  if (film) return; closeAx("axTgt"); if (AX.site) chooseSite(0); if (typeof toggleShop === "function") toggleShop(false);
+  const s = armyState(), dir = s.u < (WX0 + W) / 2 ? 1 : -1;
+  film = { part: "AF", t: 0, rewatch, spBefore: speed, camBefore: { x: cam.x, y: cam.y, zoom: cam.zoom }, capIdx: -1, actors: [], wings: [], dir, u2: clamp(s.u + dir * 430, WX0 + 260, W - 260), males: [],
+    caps: [[0.8, 7.2, L("Am Ende der Trockenzeit zieht das riesige Volk eine besondere Brut auf: sechs junge Königinnen und Tausende geflügelte Männchen.", "At the end of the dry season the huge colony raises a special brood: six young queens and thousands of winged males.")],
+           [7.6, 14.2, L("Dann teilt sich das Volk. Die eine Hälfte bleibt bei der alten Königin, die andere zieht mit einer jungen Königin davon.", "Then the colony splits. One half stays with the old queen, the other moves away with a young queen.")],
+           [14.6, 20.2, L("Die Männchen fliegen in die Nacht. Sie suchen fremde Völker, werfen ihre Flügel ab und werden dort aufgenommen. Aus einem Volk sind zwei geworden.", "The males fly off into the night. They seek out other colonies, shed their wings and are taken in there. One colony has become two.")]] };
+  for (let i = 0; i < 60; i++) film.males.push({ from: i % 2, x0: rnd(-50, 50), d: rnd(0, 6), vx: rnd(-45, 45), vy: rnd(-75, -45), ph: rnd(0, 6) });
+  film.box = filmUI(); film.box.querySelector("#filmTitle").innerHTML = `<small>${L("KAPITEL 4 · DIE WANDERAMEISEN", "CHAPTER 4 · THE ARMY ANTS")}</small><div>${L("Aus einem Volk werden zwei", "One colony becomes two")}</div>`;
+  film.box.querySelector("#filmSkip").onclick = endSplitFilm; setSpeed(0);
+  try { msMusic("hundred"); } catch (e) {}
+}
+function filmTickAF(dt, t) {
+  const f = film, s = armyState(), bx = s.u + S.x * 0.14, b2 = f.u2 + S.x * 0.14, by = S.y * 0.14, mid = (bx + b2) / 2, zFar = clamp(VW * 0.8 / (Math.abs(b2 - bx) + 420), 0.35, 1.1);
+  if (t < 7) { cam.x = bx; cam.y = by - 70; cam.zoom = lerp(1.6, 1.25, ease(t / 7)); }
+  else if (t < 14) { const a = ease((t - 7) / 7); cam.x = lerp(bx, mid, a); cam.y = by - 70 - a * 30; cam.zoom = lerp(1.25, zFar, a); }
+  else { cam.x = mid; cam.y = by - 100 - (t - 14) * 9; cam.zoom = zFar; }
+  filmCaption(f.caps); filmFade(t < 1.4 ? 1 - t / 1.4 : t > 22 ? (t - 22) / 1.2 : 0);
+  f.box.querySelector("#filmTitle").style.opacity = t > 20.2 && t < 23 ? 1 : 0;
+  if (t > 23.4) endSplitFilm();
+}
+function drawSplitFilm() {
+  const f = film, t = f.t, s = armyState(), v = 0.2, k2 = clamp((t - 8) / 6, 0, 1);
+  if (k2 > 0) drawBivouacAt(f.u2, Math.max(0.06, k2 * 0.5), false);
+  if (t > 7 && t < 16) for (let i = 0; i < 160; i++) { const q = (i * 0.618 + t * 0.14) % 1, u = lerp(s.u, f.u2, q), w = v + Math.sin(i) * 0.012; drawEci(u + S.x * w, S.y * w, i % 17 === 0 ? "soldier" : "media", f.dir, Math.floor(realTime * 10 + i) % 3, 1.15); }
+  if (t > 9 && t < 14) { const q = (t - 9) / 5, x = lerp(s.u, f.u2, q) + S.x * v, y = S.y * v; drawEci(x, y, "queen", f.dir, Math.floor(realTime * 4) % 3, 0.95); for (let i = 0; i < 10; i++) drawEci(x + (i - 5) * 11, y + Math.sin(i) * 4, "soldier", f.dir, Math.floor(realTime * 10 + i) % 3, 1.05); }
+  if (t > 13.5) for (const m of f.males) { const tt = t - 13.5 - m.d * 0.6; if (tt < 0) continue;
+    const x = (m.from ? f.u2 : s.u) + S.x * 0.14 + m.x0 + m.vx * tt + Math.sin(tt * 2 + m.ph) * 10, y = S.y * 0.14 - 30 + m.vy * tt, fl = Math.sin(realTime * 40 + m.ph);
+    ctx.save(); ctx.translate(x, y); ctx.fillStyle = "rgba(235,240,248,.55)"; ctx.beginPath(); ctx.ellipse(-2, -3 - fl * 2, 8, 2.6, -0.5 - fl * 0.5, 0, 7); ctx.fill(); ctx.beginPath(); ctx.ellipse(2, -3 + fl * 2, 8, 2.6, 0.5 + fl * 0.5, 0, 7); ctx.fill();
+    ell(-1, 0, 7, 2.4, 0, "#7a4a22"); ell(6, -0.5, 2.2, 2, 0, "#5a3418"); ctx.restore(); }
+}
+function endSplitFilm() {
+  const f = film; if (!f || f.part !== "AF") return;
+  f.box.remove(); document.body.classList.remove("filmMode"); film = null;
+  cam.x = f.camBefore.x; cam.y = f.camBefore.y; cam.zoom = f.camBefore.zoom; clampCam();
+  try { if (ac) fade(musicBus, audioOn.music); } catch (e) {} setSpeed(f.spBefore || 1);
+  if (!f.rewatch) { const s = armyState(), half = Math.round(s.pop / 2); s.pop -= half; s.soldiers = Math.round(s.soldiers / 2); s.splits = (s.splits || 0) + 1; s.splitHint = 0;
+    toast(L(`👑 Geschafft – Kapitel 4 ist gemeistert! ${fmtN(half)} Arbeiterinnen ziehen mit der jungen Königin davon, dein Volk lebt mit der alten Königin weiter. Wächst es wieder auf ${fmtN(ARMY_SPLIT)}, teilt es sich erneut.`, `👑 Done – chapter 4 is mastered! ${fmtN(half)} workers leave with the young queen, your colony lives on with the old queen. If it grows to ${fmtN(ARMY_SPLIT)} again, it will split once more.`));
+    updateShop(); try { save(); } catch (e) {} }
+}
+{ const ft = filmTick; filmTick = function (rdt) { if (film && film.part === "AF") { film.t += rdt; filmTickAF(rdt, film.t); clampCam(); return; } ft(rdt); }; }
+
+// ---------- Einhängen: Zeichnen, Echtzeit-Takt, Raubzug-Knopf ----------
+{ const dm = drawMigration; drawMigration = function () { dm(); if (!ARMY) return; if (film && film.part === "AF") { drawSplitFilm(); return; } drawTargets(); drawTrail(); drawCatch(); drawAxFx(); }; }
+{ const aw = animWeather; animWeather = function (rdt) { aw(rdt); if (!ARMY) return; catchTick(rdt); millRealTick(rdt); siteTick(rdt);
+    for (let i = AX.fx.length - 1; i >= 0; i--) if ((AX.fx[i].t += rdt) > 1.4) AX.fx.splice(i, 1);
+    if (AX.rescue && (AX.rescue.t += rdt) > 9) AX.rescue = null; }; }
+{ const sa = setupArmy; setupArmy = function () { sa();
+    const s = armyState(); if (!s.targets || !s.targets.length) { s.targets = []; for (let i = 0; i < 3; i++) spawnTarget(); s.tgtDay = armyDay(); }
+    $("eggBtn").onclick = () => { const s2 = armyState(); if (s2.tgt) s2.tgt = null; else s2.raidDir *= -1; updateRaidBtn(); try { sfx.ui(); } catch (e) {} }; updateRaidBtn(); }; }
 
 // =====================================================================
 //  v0.82 Schaukel: Brett und Seile schwingen als Einheit, das Mädchen sitzt darauf, greift die Seile und holt richtig Schwung
