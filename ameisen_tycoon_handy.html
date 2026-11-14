@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#120c07"><meta name="format-detection" content="telephone=no">
-<script id="apkUpd0">(function(){var OWN=106;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
+<script id="apkUpd0">(function(){var OWN=107;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
 try{var v=R.ver();if(v>OWN){var n=+(localStorage.getItem('at_ub')||0);if(n>=3){R.clear();localStorage.setItem('at_ub','0');}
 else{localStorage.setItem('at_ub',String(n+1));R.boot();window.stop();}}else if(v&&v<OWN)R.clear();}catch(e){}})();</script>
 <title>Ameisen-Simulator</title>
@@ -224,7 +224,7 @@ const WALD = CHAPTER === "wald", ARMY = CHAPTER === "schwarm", REGEN = CHAPTER =
 // =====================================================================
 //  Ameisen-Tycoon – 2,5D-Querschnitt durch den Ameisenbau
 // =====================================================================
-const VERSION = "v1.06";
+const VERSION = "v1.07";
 const UPDATES = [
   ["v0.1", "Prototyp: eine Ameise sucht Futter an der Oberfläche."],
   ["v0.2", "Blick in den Bau: Königin, Eier, Larven, Puppen und Arbeiterinnen. Musik und Höhlen-Geräusche."],
@@ -333,6 +333,7 @@ const UPDATES = [
   ["v1.04", "Keine Aussetzer mehr im Wald: Bei jedem Licht- oder Wetterwechsel (z. B. in der Dämmerung oder wenn Regen einsetzt) wurde der ganze Waldhintergrund neu gezeichnet – das dauerte bis zu einer Sekunde. Jetzt werden die Bäume nur einmal je Jahreszeit vorgezeichnet, verteilt über viele Bilder, und Licht und Dunst werden blitzschnell als Farbschichten darübergelegt."],
   ["v1.05", "Die schöne Grafik bleibt: Das Spiel senkt die Qualität nicht mehr von selbst. Im Menü gibt es jetzt „🖥️ Grafik“ mit Hoch (Standard), Auto (nimmt bei dauerhaftem Ruckeln nur die teuren Lichteffekte weg, die Auflösung bleibt) und Sparsam (für schwache Rechner). Neu ist außerdem „📊 Leistung anzeigen“: Es zeigt Bilder pro Sekunde und den größten Hänger der letzten 10 Sekunden – und ob die Zeit im Spiel selbst oder beim Browser/der Grafik verloren ging."],
   ["v1.06", "Weniger Grafikspeicher im Wald: Der Wald brauchte fast doppelt so viel Grafikspeicher wie die Wiese – auf Laptops mit eingebauter Grafik führte das zu Hängern von über einer Sekunde. Die drei Waldebenen liegen jetzt nur noch einmal im Speicher (eingefärbt wird beim Zusammensetzen), und die Erd-Vorlage für frisch gegrabene Gänge ist auf halbe Auflösung verkleinert. Außerdem legt der wachsende Nadelhügel nicht mehr bei jedem Wachstumsschritt eine neue Zeichenfläche an. Zusammen rund 64 MB weniger – an der sichtbaren Grafik ändert sich nichts."],
+  ["v1.07", "Neu im Menü: „⏯️ Anderer Tab“. Wählst du „Weiterspielen“, lebt dein Volk weiter, während du in einem anderen Browser-Tab bist – stumm und in der eingestellten Geschwindigkeit. Zeit, die der Browser im Hintergrund zurückhält, wird nachgeholt. Standard bleibt „Pause“."],
 ];
 const SAVE_KEY = SK("ameisen-tycoon-save-v4" + (WALD ? "-wald" : ARMY ? "-schwarm" : REGEN ? "-regen" : ""));
 
@@ -15293,6 +15294,35 @@ drawHummer = function (h) {
   ctx.strokeStyle = "#1a1410"; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(6.2, -1.6); ctx.lineTo(13, -0.8); ctx.stroke();   // langer, dünner Schnabel
   ctx.restore();
 };
+
+// =====================================================================
+//  v1.07 Weiterspielen im Hintergrund: Browser halten die Bildschleife in fremden Tabs an und bremsen Zeitgeber aus.
+//  Ein kleiner Web Worker gibt weiter den Takt vor; liegengebliebene Zeit wird beim nächsten Takt nachgeholt.
+// =====================================================================
+const BGRUN = { on: (() => { try { return localStorage.getItem("ameisenBg") === "1"; } catch (e) { return false; } })(), w: null, last: 0 };
+function bgStart() {
+  if (BGRUN.w) return;
+  try { const src = "const t = setInterval(() => postMessage(0), 100); onmessage = e => { if (e.data === 'stop') { clearInterval(t); close(); } };";
+    BGRUN.w = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" }))); } catch (e) { BGRUN.w = null; return; }
+  BGRUN.last = performance.now(); BGRUN.w.onmessage = bgTick;
+}
+function bgStop() { if (!BGRUN.w) return; try { BGRUN.w.postMessage("stop"); BGRUN.w.terminate(); } catch (e) {} BGRUN.w = null; }
+function bgTick() {
+  const now = performance.now(); let dt = (now - BGRUN.last) / 1000; BGRUN.last = now;
+  if (!document.hidden || !started || film || (!speed && !colony.skipWinter)) return;
+  dt = Math.min(dt, 120);                                                                        // höchstens zwei Minuten auf einmal nachholen
+  const n = colony.skipWinter ? 40 : speed; let rem = dt;                                         // genau wie im Spiel: pro 50 ms so viele Schritte wie die Geschwindigkeit
+  try { while (rem > 1e-6) { const r = Math.min(0.05, rem); for (let i = 0; i < n; i++) simUpdate(r); rem -= r; } } catch (e) { console.error(e); }
+}
+document.addEventListener("visibilitychange", () => { if (document.hidden && BGRUN.on) bgStart(); else bgStop(); });
+// Menü: „Im Hintergrund: Pause / Weiterspielen“
+{ const rows = document.querySelectorAll("#menu .mrow"), after = rows[rows.length - 1];
+  if (after) { const row = document.createElement("div"); row.className = "mrow"; row.setAttribute("data-notr", "1");
+    const sp = document.createElement("span"); sp.textContent = L("⏯️ Anderer Tab", "⏯️ Other tab");
+    const sw = document.createElement("div"); sw.className = "langSw"; sw.title = L("Was passiert, wenn du in einen anderen Browser-Tab wechselst: Das Spiel pausiert (Standard) oder dein Volk lebt weiter – stumm, in der eingestellten Geschwindigkeit.", "What happens when you switch to another browser tab: the game pauses (default) or your colony keeps living – silently, at the chosen speed.");
+    for (const [on, de, en] of [[false, "Pause", "Pause"], [true, "Weiterspielen", "Keep playing"]]) { const b = document.createElement("button"); b.textContent = L(de, en); if (on === BGRUN.on) b.className = "on";
+      b.onclick = e => { e.stopPropagation(); BGRUN.on = on; try { localStorage.setItem("ameisenBg", on ? "1" : "0"); } catch (_) {} sw.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); }; sw.appendChild(b); }
+    row.append(sp, sw); after.after(row); } }
 
 // --- Einhängen in die Engine ---
 { const ts2 = drawTreeShadow; drawTreeShadow = (di, L, gloom, si) => { drawPath(); ts2(di, L, gloom, si); }; }
