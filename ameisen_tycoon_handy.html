@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#120c07"><meta name="format-detection" content="telephone=no">
-<script id="apkUpd0">(function(){var OWN=110;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
+<script id="apkUpd0">(function(){var OWN=111;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
 try{var v=R.ver();if(v>OWN){var n=+(localStorage.getItem('at_ub')||0);if(n>=3){R.clear();localStorage.setItem('at_ub','0');}
 else{localStorage.setItem('at_ub',String(n+1));R.boot();window.stop();}}else if(v&&v<OWN)R.clear();}catch(e){}})();</script>
 <title>Ameisen-Simulator</title>
@@ -224,7 +224,7 @@ const WALD = CHAPTER === "wald", ARMY = CHAPTER === "schwarm", REGEN = CHAPTER =
 // =====================================================================
 //  Ameisen-Tycoon – 2,5D-Querschnitt durch den Ameisenbau
 // =====================================================================
-const VERSION = "v1.10";
+const VERSION = "v1.11";
 const UPDATES = [
   ["v0.1", "Prototyp: eine Ameise sucht Futter an der Oberfläche."],
   ["v0.2", "Blick in den Bau: Königin, Eier, Larven, Puppen und Arbeiterinnen. Musik und Höhlen-Geräusche."],
@@ -337,6 +337,7 @@ const UPDATES = [
   ["v1.08", "Keine Aussetzer mehr im Regenwald: Jedes Mal, wenn Regen einsetzte oder aufhörte und bei jeder Lichtstufe in der Dämmerung, wurden die drei großen Urwald-Ebenen komplett neu gezeichnet – auf schwächeren Rechnern ein Hänger von bis zu einer Sekunde. Jetzt werden sie nur einmal gezeichnet, Dämmerung und Regendunst kommen wie im Wald blitzschnell als Farbschicht darüber. Nebenbei leuchtet der Wachsglanz auf Monstera- und Helikonienblättern nachts nicht mehr hell."],
   ["v1.09", "Fehler behoben: War das Volk voll – im Regenwald passiert das leicht, weil ohne Winter kaum Arbeiterinnen sterben –, konnte die Königin nach „Geflügelte aufziehen“ kein einziges Ei legen. Es hieß nur „Kein Platz mehr – baue eine Wohnkammer“, obwohl es keine mehr gab. Eier für Geflügelte brauchen jetzt keinen Wohnplatz, sie wachsen im eigenen Saal heran. Und ist wirklich alles gebaut, sagt das Spiel jetzt ehrlich „alle Wohnkammern sind belegt“."],
   ["v1.10", "Der Regenwald hat jetzt ein richtiges Ende: Ist alles ausgebaut und sind die Geflügelten in der Regenzeit ausgeflogen, erscheint im Ausbau-Menü „Weiter zu Kapitel 4“. Ein kurzer Film zeigt den Hochzeitsflug der Blattschneider – und das Buch blättert um zu den Wanderameisen. Bisher wurde Kapitel 4 einfach so freigeschaltet. Im Regenwald zeigt jetzt außerdem „Weg zum großen Hochzeitsflug“, was noch fehlt."],
+  ["v1.11", "Keine Zeitlupe mehr bei großen Blattschneider-Völkern: Die Pilzgärten wurden in jedem Bild aus Tausenden einzelnen Pünktchen neu gezeichnet – je größer das Volk, desto größer die Gärten und desto langsamer das Spiel. Jetzt wird ihre Form nur berechnet, wenn sie wachsen, und pro Bild nur noch gefüllt. Sie sehen genauso aus wie vorher, die Gongylidien funkeln weiter."],
 ];
 const SAVE_KEY = SK("ameisen-tycoon-save-v4" + (WALD ? "-wald" : ARMY ? "-schwarm" : REGEN ? "-regen" : ""));
 
@@ -1338,9 +1339,11 @@ function runAction(a, act) {
 const antGrid = new Map(), GRID = 16, _near = [];
 function buildAntGrid() {
   antGrid.clear();
-  for (const o of ants) { if (o.kind !== "worker" || !(o.path.length || o.moving)) continue; const k = Math.floor(o.x / GRID); let b = antGrid.get(k); if (!b) antGrid.set(k, b = []); b.push(o); }
+  for (const o of ants) { if (o.kind !== "worker" || !(o.path.length || o.moving)) continue; const k = gridKey(Math.floor(o.x / GRID), Math.floor(o.y / GRID)); let b = antGrid.get(k); if (!b) antGrid.set(k, b = []); b.push(o); }
 }
-function nearAnts(x) { _near.length = 0; const k = Math.floor(x / GRID); for (let i = k - 1; i <= k + 1; i++) { const b = antGrid.get(i); if (b) for (const o of b) _near.push(o); } return _near; }
+// v1.11: Raster nach Breite UND Tiefe – vorher landeten alle Ameisen eines senkrechten Gangs im selben Feld (bei 300 Ameisen sehr viele Vergleiche)
+const gridKey = (kx, ky) => kx * 100000 + ky + 50000;
+function nearAnts(x, y) { _near.length = 0; const kx = Math.floor(x / GRID), ky = Math.floor(y / GRID); for (let i = kx - 1; i <= kx + 1; i++) for (let j = ky - 1; j <= ky + 1; j++) { const b = antGrid.get(gridKey(i, j)); if (b) for (const o of b) _near.push(o); } return _near; }
 function updateAnt(a, dt) {
   if (a.dead) return;
   if (a.kind === "worker") { a.age += dt * (colony.cold ? 0.35 : 1); if (a.age > a.life) { killAnt(a, "age"); return; } }   // Winterruhe: altern langsamer
@@ -1354,7 +1357,7 @@ function updateAnt(a, dt) {
   if (a.path.length && a.pause > 0) { a.pause -= dt; a.moving = false; return; }
   if (a.path.length && a.kind === "worker") {
     if (!a.carry && Math.random() < dt * 0.1) { a.pause = rnd(0.25, 0.7); return; }      // kurz innehalten und schnuppern
-    if (!(a.greetCD > 0)) for (const o of nearAnts(a.x)) {                               // Begegnung: kurz die Fühler kreuzen
+    if (!(a.greetCD > 0)) for (const o of nearAnts(a.x, a.y)) {                               // Begegnung: kurz die Fühler kreuzen
       if (o === a || o.kind !== "worker" || !o.path.length || o.greetCD > 0 || o.facing === a.facing) continue;
       if ((o.x - a.x) * a.facing > 0 && Math.abs(o.x - a.x) < 13 && Math.abs(o.y - a.y) < 8 && Math.abs(o.t - a.t) < 0.35) {
         { const fa = !!(a.carry && a.carry.kind === "food"), fo = !!(o.carry && o.carry.kind === "food"), sh = fa !== fo && Math.random() < 0.6, T = sh ? 1.8 : 0.8;   // wer Futter trägt, gibt etwas ab
@@ -1365,7 +1368,7 @@ function updateAnt(a, dt) {
   if (a.path.length) {
     const tp = a.path[0], dx = tp.x - a.x, dy = tp.y - a.y, d = Math.hypot(dx, dy);
     let slow = 1;                                   // Verkehr: hinter einer langsameren Schwester abbremsen
-    if (a.kind === "worker") for (const o of nearAnts(a.x)) {
+    if (a.kind === "worker") for (const o of nearAnts(a.x, a.y)) {
       if (o === a || !o.moving || o.facing !== a.facing) continue;
       const ahead = (o.x - a.x) * a.facing;
       if (ahead > 0 && ahead < 10 && Math.abs(o.y - a.y) < 5 && Math.abs(o.t - a.t) < 0.3) { slow = 0.45; break; }
@@ -9800,7 +9803,7 @@ setTimeout(chorusTick, 3000);
 function socialTick(a, dt) {
   if (a.kind !== "worker" || a.dead || a.path.length || !(a.wait > 0) || a.anim || a.task !== "ruht" || a.allo) return;
   if (Math.random() > dt * 0.12) return;
-  for (const o of nearAnts(a.x)) {
+  for (const o of nearAnts(a.x, a.y)) {
     if (o === a || o.kind !== "worker" || o.dead || o.path.length || !(o.wait > 0) || o.anim || o.task !== "ruht" || Math.abs(o.x - a.x) > 18 || Math.abs(o.x - a.x) < 6 || Math.abs(o.y - a.y) > 6) continue;
     const T = rnd(2.2, 3.4); a.facing = Math.sign(o.x - a.x) || 1;
     a.wait = Math.max(a.wait, T); a.greet = T; a.allo = T; a.task = "putzt eine Schwester";
@@ -10517,7 +10520,7 @@ function drawWornPaths() {
 // --- Beute gemeinsam zerlegen: Bisse, abfallende Stückchen ---
 function dismantleFx(s, x, y) {
   if (s.kind !== "insect" || film) return;
-  let n = 0; for (const a of nearAnts(x)) if (!a.dead && !a.moving && a.y < -0.5 && Math.abs(a.x - x) < 26 && Math.abs(a.y - y) < 14) n++;
+  let n = 0; for (const a of nearAnts(x, y)) if (!a.dead && !a.moving && a.y < -0.5 && Math.abs(a.x - x) < 26 && Math.abs(a.y - y) < 14) n++;
   if (!n) return;
   if (Math.random() < 0.08 * n) { parts.push({ x: x + rnd(-6, 6), y: y - 4, vx: rnd(-30, 30), vy: rnd(-40, -10), life: 0.6, c: pick(["#3a2a1a", "#5a4020", "#6a7a30"]), s: rnd(0.6, 1.1) }); sfx.tear && sfx.tear(x); }
   if (n >= 3 && !colony.flags.dismantle) { colony.flags.dismantle = 1; toast("✂️ Gemeinsam zerlegen die Ameisen die große Beute mit ihren Kiefern und tragen sie Stück für Stück heim."); }
@@ -12212,19 +12215,37 @@ function drawLeafPlant(s, x, y) {
 }
 // --- Pilzgarten: schwammartige, graue Pilzmasse auf Blattbrei, mit Gongylidien-Pünktchen ---
 const FUNGUS_CH = ["storage", "storage2", "storage3", "seeds", "royal"];
-function drawFungusGarden(c, fill, x0, x1) {                                                     // schwammartiger Pilzgarten: graue Masse voller Kammern, weiße Gongylidien, frischer Blattbrei
-  if (fill <= 0.02) return; const r = mulberry32((c.cx * 3) | 0), xa = x0 ?? c.cx - c.rx * 0.82, xb = x1 ?? c.cx + c.rx * 0.82, hMax = Math.min(c.ry * 1.05, 6 + c.ry * 1.1 * fill), t = 0.45;
-  const hOf = x => { const u = (x - (xa + xb) / 2) / ((xb - xa) / 2); return hMax * Math.pow(Math.max(0, 1 - u * u), 0.4) * (0.72 + 0.16 * Math.sin(x * 0.13 + c.cx) + 0.12 * Math.sin(x * 0.47)); };   // unregelmäßig gewölbt wie echter Pilzschwamm
-  const path = new Path2D(); path.moveTo(xa + D.x * t, floorYc(c, xa) + D.y * t);
-  for (let x = xa; x <= xb; x += 4) path.lineTo(x + D.x * t, floorYc(c, x) + D.y * t - hOf(x) - Math.sin(x * 0.9) * Math.min(2, hOf(x) * 0.2));
-  path.lineTo(xb + D.x * t, floorYc(c, xb) + D.y * t); path.closePath();
-  const yc = c.cy + D.y * t, g = ctx.createLinearGradient(0, yc - hMax, 0, yc + c.ry * 0.4); g.addColorStop(0, "#e2dccb"); g.addColorStop(0.5, "#b4ab98"); g.addColorStop(1, "#7a7062");
-  ctx.fillStyle = g; ctx.fill(path);
-  ctx.save(); ctx.clip(path);
+// v1.11: Die Form des Pilzgartens (Schwamm, Hohlräume, Gongylidien, Blattbrei) wird nur neu berechnet, wenn er wächst –
+// pro Bild werden nur noch ein paar fertige Pfade gefüllt (vorher Tausende Einzelellipsen pro Bild: Zeitlupe bei großen Völkern)
+function fungusShape(c, fill, x0, x1) {
+  const xa = x0 ?? c.cx - c.rx * 0.82, xb = x1 ?? c.cx + c.rx * 0.82, fq = Math.round(fill * 40) / 40;
+  const key = `${xa.toFixed(1)}|${xb.toFixed(1)}|${c.ry.toFixed(1)}|${c.cy}|${fq}`;
+  c._fg ||= {}; const cache = c._fg; if (cache[key]) return cache[key];
+  for (const k in cache) delete cache[k];                                                         // nur die aktuelle Form behalten
+  const r = mulberry32((c.cx * 3) | 0), hMax = Math.min(c.ry * 1.05, 6 + c.ry * 1.1 * fq);
+  const hOf = x => { const u = (x - (xa + xb) / 2) / ((xb - xa) / 2); return hMax * Math.pow(Math.max(0, 1 - u * u), 0.4) * (0.72 + 0.16 * Math.sin(x * 0.13 + c.cx) + 0.12 * Math.sin(x * 0.47)); };
+  const body = new Path2D(); body.moveTo(xa, floorYc(c, xa));
+  for (let x = xa; x <= xb; x += 4) body.lineTo(x, floorYc(c, x) - hOf(x) - Math.sin(x * 0.9) * Math.min(2, hOf(x) * 0.2));
+  body.lineTo(xb, floorYc(c, xb)); body.closePath();
+  const oval = (p, x, y, rx, ry, rot) => { rx = Math.max(0.1, rx); ry = Math.max(0.1, ry); p.moveTo(x + rx * Math.cos(rot), y + rx * Math.sin(rot)); p.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2); };
+  const HB = 6, GB = 8, holes = Array.from({ length: HB }, () => new Path2D()), gong = Array.from({ length: GB }, () => new Path2D()), mulch = new Path2D();
   const n = Math.round((xb - xa) * hMax / 14);
-  for (let i = 0; i < n; i++) { const x = xa + r() * (xb - xa), h = hOf(x), y = floorYc(c, x) + D.y * t - r() * h; ell(x + D.x * t, y, 1.4 + r() * 2.2, 1 + r() * 1.4, r() * 3, `rgba(70,60,48,${0.25 + r() * 0.3})`); }   // Hohlräume im Pilzschwamm
-  for (let i = 0; i < n * 0.8; i++) { const x = xa + r() * (xb - xa), h = hOf(x), y = floorYc(c, x) + D.y * t - r() * h; ell(x + D.x * t, y, 0.8, 0.8, 0, `rgba(255,252,240,${0.55 + 0.3 * Math.sin(realTime * 1.4 + i)})`); }   // Gongylidien
-  for (let i = 0; i < 6; i++) { const x = xa + r() * (xb - xa), h = hOf(x); ell(x + D.x * t, floorYc(c, x) + D.y * t - h * 0.92, 2.6, 1.1, r(), "rgba(90,150,60,.75)"); }   // frischer Blattbrei oben
+  for (let i = 0; i < n; i++) { const x = xa + r() * (xb - xa), h = hOf(x), y = floorYc(c, x) - r() * h, rx = 1.4 + r() * 2.2, ry = 1 + r() * 1.4, rot = r() * 3, a = r();   // Hohlräume im Pilzschwamm
+    oval(holes[Math.min(HB - 1, Math.floor(a * HB))], x, y, rx, ry, rot); }
+  for (let i = 0; i < n * 0.8; i++) { const x = xa + r() * (xb - xa), h = hOf(x), y = floorYc(c, x) - r() * h;   // Gongylidien, nach ihrem Funkeltakt sortiert
+    oval(gong[Math.floor(((i % (Math.PI * 2)) / (Math.PI * 2)) * GB) % GB], x, y, 0.8, 0.8, 0); }
+  for (let i = 0; i < 6; i++) { const x = xa + r() * (xb - xa), h = hOf(x); oval(mulch, x, floorYc(c, x) - h * 0.92, 2.6, 1.1, r()); }   // frischer Blattbrei oben
+  return (cache[key] = { body, holes, gong, mulch, hMax });
+}
+function drawFungusGarden(c, fill, x0, x1) {                                                     // schwammartiger Pilzgarten: graue Masse voller Kammern, weiße Gongylidien, frischer Blattbrei
+  if (fill <= 0.02) return; const t = 0.45, F = fungusShape(c, fill, x0, x1);
+  ctx.save(); ctx.translate(D.x * t, D.y * t);
+  const g = ctx.createLinearGradient(0, c.cy - F.hMax, 0, c.cy + c.ry * 0.4); g.addColorStop(0, "#e2dccb"); g.addColorStop(0.5, "#b4ab98"); g.addColorStop(1, "#7a7062");
+  ctx.fillStyle = g; ctx.fill(F.body);
+  ctx.clip(F.body);
+  F.holes.forEach((p, b) => { ctx.fillStyle = `rgba(70,60,48,${(0.25 + (b + 0.5) / F.holes.length * 0.3).toFixed(3)})`; ctx.fill(p); });
+  F.gong.forEach((p, b) => { const ph = (b + 0.5) / F.gong.length * Math.PI * 2; ctx.fillStyle = `rgba(255,252,240,${(0.55 + 0.3 * Math.sin(realTime * 1.4 + ph)).toFixed(3)})`; ctx.fill(p); });
+  ctx.fillStyle = "rgba(90,150,60,.75)"; ctx.fill(F.mulch);
   ctx.restore();
 }
 function pushFungus(objs) {
