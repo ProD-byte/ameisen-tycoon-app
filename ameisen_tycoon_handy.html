@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#120c07"><meta name="format-detection" content="telephone=no">
-<script id="apkUpd0">(function(){var OWN=112;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
+<script id="apkUpd0">(function(){var OWN=113;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
 try{var v=R.ver();if(v>OWN){var n=+(localStorage.getItem('at_ub')||0);if(n>=3){R.clear();localStorage.setItem('at_ub','0');}
 else{localStorage.setItem('at_ub',String(n+1));R.boot();window.stop();}}else if(v&&v<OWN)R.clear();}catch(e){}})();</script>
 <title>Ameisen-Simulator</title>
@@ -224,7 +224,7 @@ const WALD = CHAPTER === "wald", ARMY = CHAPTER === "schwarm", REGEN = CHAPTER =
 // =====================================================================
 //  Ameisen-Tycoon – 2,5D-Querschnitt durch den Ameisenbau
 // =====================================================================
-const VERSION = "v1.12";
+const VERSION = "v1.13";
 const UPDATES = [
   ["v0.1", "Prototyp: eine Ameise sucht Futter an der Oberfläche."],
   ["v0.2", "Blick in den Bau: Königin, Eier, Larven, Puppen und Arbeiterinnen. Musik und Höhlen-Geräusche."],
@@ -339,6 +339,7 @@ const UPDATES = [
   ["v1.10", "Der Regenwald hat jetzt ein richtiges Ende: Ist alles ausgebaut und sind die Geflügelten in der Regenzeit ausgeflogen, erscheint im Ausbau-Menü „Weiter zu Kapitel 4“. Ein kurzer Film zeigt den Hochzeitsflug der Blattschneider – und das Buch blättert um zu den Wanderameisen. Bisher wurde Kapitel 4 einfach so freigeschaltet. Im Regenwald zeigt jetzt außerdem „Weg zum großen Hochzeitsflug“, was noch fehlt."],
   ["v1.11", "Keine Zeitlupe mehr bei großen Blattschneider-Völkern: Die Pilzgärten wurden in jedem Bild aus Tausenden einzelnen Pünktchen neu gezeichnet – je größer das Volk, desto größer die Gärten und desto langsamer das Spiel. Jetzt wird ihre Form nur berechnet, wenn sie wachsen, und pro Bild nur noch gefüllt. Sie sehen genauso aus wie vorher, die Gongylidien funkeln weiter."],
   ["v1.12", "Regenwald: Die Geflügelten schwärmen jetzt wie echte Blattschneider gleich zu Beginn der Regenzeit aus – nicht erst gegen Ende der Kleinen Regenzeit. Während sie warten, zeigt der Tipp, wie viele Tage es noch bis zur Regenzeit dauert – statt dazu aufzufordern, sie noch einmal zu kaufen."],
+  ["v1.13", "Regenwald: Sind die Geflügelten ausgewachsen, erscheint im Ausbau-Menü der Knopf „Jetzt ausfliegen lassen“. Damit schwärmen sie sofort zum Hochzeitsflug aus, und es geht sicher weiter zu Kapitel 4 – auch wenn Regen, Nacht oder ein verschlossener Eingang sie bisher im Nest festhielten."],
 ];
 const SAVE_KEY = SK("ameisen-tycoon-save-v4" + (WALD ? "-wald" : ARMY ? "-schwarm" : REGEN ? "-regen" : ""));
 
@@ -7100,6 +7101,7 @@ function tipText() {
   if (ws < 3 && !eggBlock()) return "Lege weitere Eier – mehr Arbeiterinnen sammeln mehr Nahrung.";
   if (CHAPTER === "regen" && nestComplete() && !(colony.flights > 0) && (colony.alateEggs > 0 || ants.some(a => a.kind === "alate"))) {
     const si = seasonInfo();
+    if (!(colony.flightT > 0) && readyAlates().length >= 2) return L("🪽 Deine Geflügelten sind ausgewachsen! Öffne das Ausbau-Menü und tippe auf „Jetzt ausfliegen lassen“ – dann beginnt Kapitel 4.", "🪽 Your winged ants are fully grown! Open the upgrade menu and tap “Let them fly now” – then chapter 4 begins.");
     if (si.idx >= 2) { const d = Math.max(1, Math.ceil(((4 - si.idx) - si.frac) * SEASON_DAYS)); return L(`🪽 Die Geflügelten warten auf die nächste Regenzeit – vorher fliegen sie nicht aus. Noch etwa ${d} ${d === 1 ? "Tag" : "Tage"}, dann schwärmen sie aus und Kapitel 4 beginnt. (Tipp: mit 8× geht es schnell.)`, `🪽 The winged ants are waiting for the next wet season – they won't fly before. About ${d} more ${d === 1 ? "day" : "days"}, then they swarm out and chapter 4 begins. (Tip: 8× makes it quick.)`); }
     return L("🪽 Regenzeit! Sobald die Geflügelten ausgewachsen sind, fliegen sie an einem Nachmittag (13–18 Uhr) aus, wenn es gerade nicht regnet – dann beginnt Kapitel 4.", "🪽 Wet season! Once the winged ants are grown, they fly out one afternoon (1–6 pm) when it isn't raining – then chapter 4 begins.");
   }
@@ -8233,7 +8235,32 @@ function updateFlightCard() {
   }
   if (book.chapters.includes(nextCh)) { flightCard.querySelector(".t").textContent = "Großer Hochzeitsflug (noch einmal ansehen)"; }
 }
-{ const us = updateShop; updateShop = () => { us(); updateFlightCard(); const b = $("shopBadge"); if (flightCard && !book.chapters.includes(WALD ? "regen" : CHAPTER === "regen" ? "schwarm" : "wald")) { b.textContent = (+b.textContent || 0) + 1; b.classList.add("has"); } }; }
+// v1.13: Regenwald – sicherer Weg zu Kapitel 4: Sind die Geflügelten ausgewachsen, kann man sie per Knopf sofort ausfliegen lassen
+function readyAlates() { return ants.filter(a => a.kind === "alate" && !a.flying && a.callow < 0.3); }
+function startAlateFlight() {
+  const ready = readyAlates(); if (!ready.length) return;
+  colony.flightT = 60;
+  for (const id of ["entrance", "entrance2", "entrance3", "entrance4"]) if (isDone(id)) colony.plug[id] = "open";
+  const f = ready.filter(a => a.sex === "f").length, m = ready.length - f;
+  toast(L(`🪽 Hochzeitsflug! ${f} Prinzessinnen und ${m} Männchen schwärmen aus – die Arbeiterinnen wimmeln aufgeregt um den Eingang.`, `🪽 Nuptial flight! ${f} princesses and ${m} males swarm out – the workers bustle excitedly around the entrance.`));
+  for (const a of ready) { a.queue.length = 0; a.path.length = 0; a.wait = 0; }
+  setTimeout(() => { if (!(colony.flights > 0) && f > 0) colony.flights = f; updateShop(); }, 15000);   // falls eine unterwegs hängen bleibt
+  updateShop();
+}
+let alateCard = null;
+function updateAlateCard() {
+  const show = CHAPTER === "regen" && !book.chapters.includes("schwarm") && nestComplete() && !(colony.flights > 0) && !(colony.flightT > 0) && readyAlates().length >= 2;
+  if (!show) { if (alateCard) { alateCard.remove(); alateCard = null; } return; }
+  if (alateCard) return;
+  alateCard = document.createElement("div"); alateCard.className = "card buy flightCard";
+  alateCard.innerHTML = `<div class="ic">🪽</div><div class="bd"><div class="t"></div><div class="d"></div><div class="act"><button></button></div></div>`;
+  alateCard.querySelector(".t").textContent = L("Die Geflügelten sind bereit", "The winged ants are ready");
+  alateCard.querySelector(".d").textContent = L("Deine Prinzessinnen und Männchen sind ausgewachsen. Lass sie jetzt zum Hochzeitsflug ausschwärmen – danach geht es weiter zu Kapitel 4.", "Your princesses and males are fully grown. Let them swarm out on their nuptial flight now – then it's on to chapter 4.");
+  alateCard.querySelector("button").textContent = L("Jetzt ausfliegen lassen", "Let them fly now");
+  alateCard.querySelector("button").onclick = startAlateFlight;
+  $("cards").prepend(alateCard);
+}
+{ const us = updateShop; updateShop = () => { us(); updateFlightCard(); updateAlateCard(); if (alateCard) { const b = $("shopBadge"); b.textContent = (+b.textContent || 0) + 1; b.classList.add("has"); } const b = $("shopBadge"); if (flightCard && !book.chapters.includes(WALD ? "regen" : CHAPTER === "regen" ? "schwarm" : "wald")) { b.textContent = (+b.textContent || 0) + 1; b.classList.add("has"); } }; }
 
 // =====================================================================
 //  Filmszene: Hochzeitsflug → Waldrand → Waldameisen-Königin unter dem Stumpf
