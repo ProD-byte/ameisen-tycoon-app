@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#120c07"><meta name="format-detection" content="telephone=no">
-<script id="apkUpd0">(function(){var OWN=114;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
+<script id="apkUpd0">(function(){var OWN=115;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
 try{var v=R.ver();if(v>OWN){var n=+(localStorage.getItem('at_ub')||0);if(n>=3){R.clear();localStorage.setItem('at_ub','0');}
 else{localStorage.setItem('at_ub',String(n+1));R.boot();window.stop();}}else if(v&&v<OWN)R.clear();}catch(e){}})();</script>
 <title>Ameisen-Simulator</title>
@@ -224,7 +224,7 @@ const WALD = CHAPTER === "wald", ARMY = CHAPTER === "schwarm", REGEN = CHAPTER =
 // =====================================================================
 //  Ameisen-Tycoon – 2,5D-Querschnitt durch den Ameisenbau
 // =====================================================================
-const VERSION = "v1.14";
+const VERSION = "v1.15";
 const UPDATES = [
   ["v0.1", "Prototyp: eine Ameise sucht Futter an der Oberfläche."],
   ["v0.2", "Blick in den Bau: Königin, Eier, Larven, Puppen und Arbeiterinnen. Musik und Höhlen-Geräusche."],
@@ -341,6 +341,7 @@ const UPDATES = [
   ["v1.12", "Regenwald: Die Geflügelten schwärmen jetzt wie echte Blattschneider gleich zu Beginn der Regenzeit aus – nicht erst gegen Ende der Kleinen Regenzeit. Während sie warten, zeigt der Tipp, wie viele Tage es noch bis zur Regenzeit dauert – statt dazu aufzufordern, sie noch einmal zu kaufen."],
   ["v1.13", "Regenwald: Sind die Geflügelten ausgewachsen, erscheint im Ausbau-Menü der Knopf „Jetzt ausfliegen lassen“. Damit schwärmen sie sofort zum Hochzeitsflug aus, und es geht sicher weiter zu Kapitel 4 – auch wenn Regen, Nacht oder ein verschlossener Eingang sie bisher im Nest festhielten."],
   ["v1.14", "Kapitel 4 läuft viel flüssiger: Das Biwak wurde beim nächtlichen Umzug in Dutzenden Zwischengrößen neu gezeichnet (jedes Mal bis zu 150 ms Standbild) und füllte dabei den Grafikspeicher. Jetzt wird es nur einmal gemalt und skaliert, und die Ameisenkörper im Querschnitt kommen aus einem fertigen Bild statt 1.600 Einzelzeichnungen pro Frame – bei gleichem Aussehen. Außerdem hat Kapitel 4 eigene Tipps: Sie zeigen Raubzug, Umzug und Standphase, sagen, wann eine Anpassung bezahlbar ist, und raten zum Richtungswechsel, wenn die Gegend leergefressen ist (vorher stand dort „Lass die Königin ihr erstes Ei legen!“)."],
+  ["v1.15", "Kapitel 4: Der Raubzug-Knopf zeigt jetzt, wie viel Beute in der gewählten Richtung noch liegt (🦗🦗🦗 viel, 🦗🦗 etwas, 🦗 kaum) – so lohnt sich die Wahl zwischen links und rechts. Tipps zeigen während Raubzug und Standphase, wann wie viele neue Arbeiterinnen schlüpfen; die täglichen Verluste werden so vom Nachwuchs sichtbar mehr als ausgeglichen. Ein neues Wanderameisen-Volk startet kurz vor dem ersten Schlupf, statt erst eine Woche lang nur Ameisen zu verlieren."],
 ];
 const SAVE_KEY = SK("ameisen-tycoon-save-v4" + (WALD ? "-wald" : ARMY ? "-schwarm" : REGEN ? "-regen" : ""));
 
@@ -13258,7 +13259,7 @@ const fmtN = n => Math.round(n).toLocaleString("de-DE");
 const A = {};                                                           // Laufzeitzustand, gespeichert in colony.flags.army
 const ARMY_CELLS = 40, CELL_W = WW / ARMY_CELLS;
 function armyState() {
-  const F = colony.flags; if (!F.army) F.army = { pop: 62000, soldiers: 2400, eggs: 0, larvae: 34000, pupae: 0, phase: "nom", pday: 1, u: EXIT_U, dir: 1, cells: Array.from({ length: ARMY_CELLS }, (_, i) => 0.55 + 0.45 * Math.abs(Math.sin(i * 1.7))), lastDay: -1, raidDir: 1, lost: 0, caught: 0 };
+  const F = colony.flags; if (!F.army) F.army = { pop: 62000, soldiers: 2400, eggs: 52000, larvae: 0, pupae: 34000, phase: "stat", pday: 3, u: EXIT_U, dir: 1, cells: Array.from({ length: ARMY_CELLS }, (_, i) => 0.55 + 0.45 * Math.abs(Math.sin(i * 1.7))), lastDay: -1, raidDir: 1, lost: 0, caught: 0 };
   return F.army;
 }
 // ---------- Zeichnen der Kasten: blind, langbeinig, Soldatinnen mit Sichelkiefern ----------
@@ -13539,20 +13540,32 @@ function armyTip() {
   if (MIG.on) return L("🌙 Umzug bei Nacht: Die Arbeiterinnen tragen alle Larven zum neuen Biwak, irgendwann folgt die Königin im Schutz der Soldatinnen.", "🌙 Moving by night: the workers carry all the larvae to the new bivouac, and at some point the queen follows, guarded by soldiers.");
   const buy = UNLOCKS.find(u => !unlocked[u.id] && u.req() && colony.food >= u.cost);
   if (buy) return L(`Du kannst jetzt „${buy.name}“ freischalten!`, `You can unlock “${trStr(buy.name)}” now!`);
-  if (RAID.on) return L(`⚔️ Der Raubzug läuft – bisher ${fmtN(RAID.gain || 0)} Beute. Achte auf die Ameisenvögel, die der Front folgen!`, `⚔️ The raid is on – ${fmtN(RAID.gain || 0)} prey so far. Watch the antbirds following the front!`);
+  const hi = hatchInfo();
+  if (RAID.on) return L(`⚔️ Der Raubzug läuft – bisher ${fmtN(RAID.gain || 0)} Beute. Die Beute füttert die Brut: In ${hi.days} ${hi.days === 1 ? "Tag" : "Tagen"} schlüpfen etwa ${fmtN(hi.n)} neue Arbeiterinnen.`, `⚔️ The raid is on – ${fmtN(RAID.gain || 0)} prey so far. The prey feeds the brood: in ${hi.days} ${hi.days === 1 ? "day" : "days"} about ${fmtN(hi.n)} new workers will hatch.`);
   const ci = clamp(Math.floor((s.u - WX0) / CELL_W), 0, ARMY_CELLS - 1), reach = Math.max(2, Math.ceil(raidLen() / CELL_W));
   let sum = 0, n = 0; for (let i = 1; i <= reach; i++) { const j = ci + i * s.raidDir; if (j < 0 || j >= ARMY_CELLS) break; sum += s.cells[j]; n++; }
-  if (A.hungerT || n === 0 || sum / n < 0.35) return L("🧭 In dieser Richtung gibt es kaum noch Beute. Tippe unten auf den Raubzug-Knopf und wechsle die Richtung – dort hat sich die Gegend erholt.", "🧭 There's hardly any prey left in this direction. Tap the raid button below to switch direction – the forest floor there has recovered.");
+  if ((A.hungerT || n === 0 || sum / n < 0.35) && preyAhead(-s.raidDir) > preyAhead(s.raidDir) + 0.1) return L("🧭 In dieser Richtung gibt es kaum noch Beute. Tippe unten auf den Raubzug-Knopf und wechsle die Richtung – dort hat sich die Gegend erholt.", "🧭 There's hardly any prey left in this direction. Tap the raid button below to switch direction – the forest floor there has recovered.");
   const dCreek = (armyCreekU() - s.u) * s.raidDir;
   if (!unlocked.livebridge && dCreek > 0 && dCreek < raidLen() && colony.food < 380) return L("🌊 Der Bach stoppt die Schwarmfront. Mit der Anpassung „Lebende Brücken“ kommt dein Volk hinüber – oder wechsle die Richtung.", "🌊 The creek stops the swarm front. With the adaptation “Living bridges” your colony can cross – or switch direction.");
   const next = UNLOCKS.find(u => !unlocked[u.id] && u.req());
   if (next) return colony.food >= next.cost ? L(`Du kannst jetzt „${next.name}“ freischalten!`, `You can unlock “${trStr(next.name)}” now!`) : L(`Spare Beute für „${next.name}“ (${next.cost} 🦗).`, `Save up prey for “${trStr(next.name)}” (${next.cost} 🦗).`);
-  if (s.phase === "stat") return L(`🏕️ Standphase (Tag ${s.pday}/${ARMY_STAT}): Die Königin legt Zehntausende Eier, die Puppen reifen. Die Raubzüge sind jetzt kleiner, umgezogen wird nicht.`, `🏕️ Stationary phase (day ${s.pday}/${ARMY_STAT}): the queen lays tens of thousands of eggs while the pupae mature. Raids are smaller now and the colony doesn't move.`);
+  if (s.phase === "stat") return L(`🏕️ Standphase (Tag ${s.pday}/${ARMY_STAT}): Die Königin legt Zehntausende Eier, die Puppen reifen. In ${hi.days} ${hi.days === 1 ? "Tag" : "Tagen"} schlüpfen etwa ${fmtN(hi.n)} neue Arbeiterinnen.`, `🏕️ Stationary phase (day ${s.pday}/${ARMY_STAT}): the queen lays tens of thousands of eggs while the pupae mature. In ${hi.days} ${hi.days === 1 ? "day" : "days"} about ${fmtN(hi.n)} new workers will hatch.`);
   const lock = UNLOCKS.find(u => !unlocked[u.id]);
   if (lock) return L(`Lass dein Volk weiter wachsen – „${lock.name}“: ${lock.reqTxt}.`, `Keep growing your colony – “${trStr(lock.name)}”: ${trStr(lock.reqTxt)}.`);
   return L("⚔️ Alle Anpassungen sind freigeschaltet – dein Wanderameisen-Volk ist der Schrecken des Waldbodens. Lass es weiter wachsen!", "⚔️ All adaptations are unlocked – your army ant colony is the terror of the forest floor. Keep it growing!");
 }
-function updateRaidBtn() { const s = armyState(); $("eggBtn").textContent = s.raidDir > 0 ? "⚔️ Raubzug: rechts →" : "← Raubzug: links ⚔️"; $("eggBtn").title = "Richtung des nächsten Raubzugs und der Wanderung. Wanderameisen leeren die Gegend – zieh dorthin, wo noch Beute ist."; }
+// v1.15: Wie viel Beute liegt in einer Richtung noch? (der Bach versperrt ohne lebende Brücken den Weg)
+function preyAhead(dir) {
+  const s = armyState(), ci = clamp(Math.floor((s.u - WX0) / CELL_W), 0, ARMY_CELLS - 1), reach = Math.max(2, Math.ceil(raidLen() / CELL_W)), dc = (armyCreekU() - s.u) * dir;
+  let sum = 0, n = 0; for (let i = 1; i <= reach; i++) { const j = ci + i * dir; if (j < 0 || j >= ARMY_CELLS) break; if (!unlocked.livebridge && dc > 0 && i * CELL_W > dc) break; sum += s.cells[j]; n++; }
+  return n ? sum / n * Math.min(1, n / reach * 1.5) : 0;
+}
+function hatchInfo() { const s = armyState(), k = unlocked.bivouac ? 0.97 : 0.9;
+  return s.phase === "stat" ? { days: Math.max(1, ARMY_STAT - s.pday + 1), n: s.pupae * k } : { days: Math.max(1, ARMY_NOM - s.pday + 1) + ARMY_STAT, n: s.larvae * k }; }
+function updateRaidBtn() { const s = armyState(), p = preyAhead(s.raidDir), lv = p > 0.55 ? 3 : p > 0.3 ? 2 : 1;
+  const de = ["", "kaum Beute", "etwas Beute", "viel Beute"][lv], en = ["", "little prey", "some prey", "lots of prey"][lv], ic = "🦗".repeat(lv);
+  const txt = s.raidDir > 0 ? L(`⚔️ Raubzug: rechts → · ${ic} ${de}`, `⚔️ Raid: right → · ${ic} ${en}`) : L(`← Raubzug: links ⚔️ · ${ic} ${de}`, `← Raid: left ⚔️ · ${ic} ${en}`);
+  if ($("eggBtn").textContent !== txt) $("eggBtn").textContent = txt; $("eggBtn").title = "Richtung des nächsten Raubzugs und der Wanderung. Wanderameisen leeren die Gegend – zieh dorthin, wo noch Beute ist."; }
 // =====================================================================
 //  Kapitel 4, Etappe 2: Mitläufer der Front und große Überfälle
 // =====================================================================
@@ -15509,7 +15522,7 @@ $("startBtn").onclick = () => {
   try { audioInit(); } catch (err) { console.warn("Audio nicht verfügbar", err); }
   $("start").remove(); started = true; setSpeed(1);
   hudTimer = 0;
-  if (ARMY) { setTimeout(() => toast(hadSave ? "💾 Spielstand geladen – willkommen zurück!" : "⚔️ Ein junges Wanderameisen-Volk hängt als lebender Ball unter einem umgestürzten Stamm: 62.000 blinde Arbeiterinnen, eine riesige Königin – und ihre Larven haben Hunger."), 400); return; }
+  if (ARMY) { setTimeout(() => toast(hadSave ? "💾 Spielstand geladen – willkommen zurück!" : L("⚔️ Ein junges Wanderameisen-Volk hängt als lebender Ball unter einem umgestürzten Stamm: 62.000 blinde Arbeiterinnen, eine riesige Königin – und in zwei Tagen schlüpfen über 30.000 junge Arbeiterinnen aus ihren Puppen.", "⚔️ A young army ant colony hangs as a living ball under a fallen log: 62,000 blind workers, a giant queen – and in two days more than 30,000 young workers will hatch from their pupae.")), 400); return; }
   if (location.hash === "#film" && !WALD && !REGEN) setTimeout(() => playFlightFilm(true), 300);      // Film zum Ansehen: Adresse mit #film öffnen
   if (WALD && FILM2) setTimeout(() => playForestFilm(FILM2.preview), 250);
   if (REGEN && (FILM3 || !hadSave)) setTimeout(() => playRegenArrival(!!(FILM3 && FILM3.preview)), 250);
