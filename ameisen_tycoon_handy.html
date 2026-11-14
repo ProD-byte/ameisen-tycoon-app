@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#120c07"><meta name="format-detection" content="telephone=no">
-<script id="apkUpd0">(function(){var OWN=108;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
+<script id="apkUpd0">(function(){var OWN=109;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
 try{var v=R.ver();if(v>OWN){var n=+(localStorage.getItem('at_ub')||0);if(n>=3){R.clear();localStorage.setItem('at_ub','0');}
 else{localStorage.setItem('at_ub',String(n+1));R.boot();window.stop();}}else if(v&&v<OWN)R.clear();}catch(e){}})();</script>
 <title>Ameisen-Simulator</title>
@@ -224,7 +224,7 @@ const WALD = CHAPTER === "wald", ARMY = CHAPTER === "schwarm", REGEN = CHAPTER =
 // =====================================================================
 //  Ameisen-Tycoon – 2,5D-Querschnitt durch den Ameisenbau
 // =====================================================================
-const VERSION = "v1.08";
+const VERSION = "v1.09";
 const UPDATES = [
   ["v0.1", "Prototyp: eine Ameise sucht Futter an der Oberfläche."],
   ["v0.2", "Blick in den Bau: Königin, Eier, Larven, Puppen und Arbeiterinnen. Musik und Höhlen-Geräusche."],
@@ -335,6 +335,7 @@ const UPDATES = [
   ["v1.06", "Weniger Grafikspeicher im Wald: Der Wald brauchte fast doppelt so viel Grafikspeicher wie die Wiese – auf Laptops mit eingebauter Grafik führte das zu Hängern von über einer Sekunde. Die drei Waldebenen liegen jetzt nur noch einmal im Speicher (eingefärbt wird beim Zusammensetzen), und die Erd-Vorlage für frisch gegrabene Gänge ist auf halbe Auflösung verkleinert. Außerdem legt der wachsende Nadelhügel nicht mehr bei jedem Wachstumsschritt eine neue Zeichenfläche an. Zusammen rund 64 MB weniger – an der sichtbaren Grafik ändert sich nichts."],
   ["v1.07", "Neu im Menü: „⏯️ Anderer Tab“. Wählst du „Weiterspielen“, lebt dein Volk weiter, während du in einem anderen Browser-Tab bist – stumm und in der eingestellten Geschwindigkeit. Zeit, die der Browser im Hintergrund zurückhält, wird nachgeholt. Standard bleibt „Pause“."],
   ["v1.08", "Keine Aussetzer mehr im Regenwald: Jedes Mal, wenn Regen einsetzte oder aufhörte und bei jeder Lichtstufe in der Dämmerung, wurden die drei großen Urwald-Ebenen komplett neu gezeichnet – auf schwächeren Rechnern ein Hänger von bis zu einer Sekunde. Jetzt werden sie nur einmal gezeichnet, Dämmerung und Regendunst kommen wie im Wald blitzschnell als Farbschicht darüber. Nebenbei leuchtet der Wachsglanz auf Monstera- und Helikonienblättern nachts nicht mehr hell."],
+  ["v1.09", "Fehler behoben: War das Volk voll – im Regenwald passiert das leicht, weil ohne Winter kaum Arbeiterinnen sterben –, konnte die Königin nach „Geflügelte aufziehen“ kein einziges Ei legen. Es hieß nur „Kein Platz mehr – baue eine Wohnkammer“, obwohl es keine mehr gab. Eier für Geflügelte brauchen jetzt keinen Wohnplatz, sie wachsen im eigenen Saal heran. Und ist wirklich alles gebaut, sagt das Spiel jetzt ehrlich „alle Wohnkammern sind belegt“."],
 ];
 const SAVE_KEY = SK("ameisen-tycoon-save-v4" + (WALD ? "-wald" : ARMY ? "-schwarm" : REGEN ? "-regen" : ""));
 
@@ -1234,9 +1235,13 @@ function requestEggs(n) {
   }
   return k;
 }
+// v1.09: Eier für Geflügelte brauchen keinen Wohnplatz – sie wachsen im eigenen Saal heran und fliegen aus.
+// Sonst blieb ein volles Volk (z. B. im Regenwald ohne Winterverluste) für immer stecken: gekauft, aber nie ein Ei gelegt.
+const alateRoom = () => (colony.alateEggs || 0) + broods.filter(b => b.alate).length;
+const homeLeft = () => UNLOCKS.some(u => KIND_OF[u.project] === "home" && !isDone(u.project));
 function eggBlockFree() {   // wie eggBlock, aber ohne "legt gerade"
   if (colony.cold) return "winter";
-  if (popUsed() + colony.laySlots.length >= popCap()) return "voll";
+  if (popUsed() + colony.laySlots.length >= popCap() + alateRoom()) return "voll";
   if (!freeRoyalSlot()) return "slots";
   if (colony.food < eggCost() + larvaReserve()) return "food";
   return "";
@@ -1244,7 +1249,7 @@ function eggBlockFree() {   // wie eggBlock, aber ohne "legt gerade"
 function eggBlock() {
   if (colony.cold) return "❄️ Winterruhe – im Winter legt die Königin keine Eier";
   if (colony.laySlots.length) return `Die Königin legt gerade Eier (noch ${colony.laySlots.length}) …`;
-  if (popUsed() + colony.laySlots.length >= popCap()) return `Kein Platz mehr (${popCap()} Plätze) – baue eine Wohnkammer`;
+  if (popUsed() + colony.laySlots.length >= popCap() + alateRoom()) return homeLeft() ? `Kein Platz mehr (${popCap()} Plätze) – baue eine Wohnkammer` : L(`Kolonie voll (${popCap()} Plätze) – alle Wohnkammern sind belegt`, `Colony full (${popCap()} places) – all living chambers are taken`);
   if (!freeRoyalSlot()) return isDone("nursery") ? "Brutplätze in der Königinnenkammer sind voll" : "Alle Brutplätze belegt – baue eine Brutkammer";
   if (colony.food < eggCost() + larvaReserve()) return larvaReserve() ? `Zu wenig Nahrung (${eggCost()} ${FOODI} fürs Ei + ${larvaReserve()} ${FOODI} für die Larve)` : `Zu wenig Nahrung (${eggCost()} 🍯 nötig)`;
   return "";
@@ -7088,7 +7093,7 @@ function tipText() {
   if (ws < 3 && !eggBlock()) return "Lege weitere Eier – mehr Arbeiterinnen sammeln mehr Nahrung.";
   const next = UNLOCKS.find(u => !unlocked[u.id] && u.req() && u.id !== "more");
   if (next) return colony.food >= next.cost ? `Du kannst jetzt „${next.name}“ freischalten!` : `Spare Nahrung für „${next.name}“ (${next.cost} ${FOODI}).`;
-  if (eggBlock().startsWith("Kein Platz")) return "Die Kolonie ist voll. Neue Ausbauten folgen in den nächsten Updates!";
+  if (eggBlockFree() === "voll") return homeLeft() ? "Die Kolonie ist voll – baue die nächste Wohnkammer." : L("Die Kolonie ist voll – alle Wohnkammern sind belegt. Mit „Geflügelte aufziehen“ geht es zum großen Hochzeitsflug.", "The colony is full – all living chambers are taken. Rear winged ants to start the great nuptial flight.");
   return "Weiter so! Lege Eier und sammle Nahrung.";
 }
 const cardEls = {};
@@ -13739,7 +13744,7 @@ const I18N_EXACT = new Map(Object.entries({
   "Deine Arbeiterinnen graben den Eingang …": "Your workers are digging the entrance …", "Schalte die Futtersuche frei – dann sammeln deine Ameisen Nahrung.": "Unlock foraging – then your ants will gather food.",
   "🍂 Der Winter naht – fülle die Vorratskammern, solange es noch Futter gibt!": "🍂 Winter is coming – fill the storerooms while there is still food!", "🌧️ Es regnet – die Sammlerinnen warten im Bau, bis es aufhört.": "🌧️ It's raining – the foragers wait in the nest until it stops.",
   "Nachts bleiben die Sammlerinnen im Bau. Nutze die Zeit zum Graben und Brüten.": "At night the foragers stay inside. Use the time for digging and brood care.", "Eine Späherin sucht draußen nach Futter. Findet sie etwas, legt sie eine Duftspur für die anderen.": "A scout is searching for food outside. If she finds some, she lays a scent trail for the others.",
-  "Die Kolonie ist voll. Neue Ausbauten folgen in den nächsten Updates!": "The colony is full. New expansions will follow in future updates!", "Weiter so! Lege Eier und sammle Nahrung.": "Keep it up! Lay eggs and gather food.",
+  "Die Kolonie ist voll. Neue Ausbauten folgen in den nächsten Updates!": "The colony is full. New expansions will follow in future updates!", "Die Kolonie ist voll – baue die nächste Wohnkammer.": "The colony is full – build the next living chamber.", "Weiter so! Lege Eier und sammle Nahrung.": "Keep it up! Lay eggs and gather food.",
   // Gründe, warum gerade kein Ei geht
   "❄️ Winterruhe – im Winter legt die Königin keine Eier": "❄️ Winter rest – the queen lays no eggs in winter", "Brutplätze in der Königinnenkammer sind voll": "The brood places in the queen's chamber are full", "Alle Brutplätze belegt – baue eine Brutkammer": "All brood places are taken – build a brood chamber",
   // Rollen
