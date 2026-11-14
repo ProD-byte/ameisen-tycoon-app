@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#120c07"><meta name="format-detection" content="telephone=no">
-<script id="apkUpd0">(function(){var OWN=113;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
+<script id="apkUpd0">(function(){var OWN=114;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
 try{var v=R.ver();if(v>OWN){var n=+(localStorage.getItem('at_ub')||0);if(n>=3){R.clear();localStorage.setItem('at_ub','0');}
 else{localStorage.setItem('at_ub',String(n+1));R.boot();window.stop();}}else if(v&&v<OWN)R.clear();}catch(e){}})();</script>
 <title>Ameisen-Simulator</title>
@@ -224,7 +224,7 @@ const WALD = CHAPTER === "wald", ARMY = CHAPTER === "schwarm", REGEN = CHAPTER =
 // =====================================================================
 //  Ameisen-Tycoon – 2,5D-Querschnitt durch den Ameisenbau
 // =====================================================================
-const VERSION = "v1.13";
+const VERSION = "v1.14";
 const UPDATES = [
   ["v0.1", "Prototyp: eine Ameise sucht Futter an der Oberfläche."],
   ["v0.2", "Blick in den Bau: Königin, Eier, Larven, Puppen und Arbeiterinnen. Musik und Höhlen-Geräusche."],
@@ -340,6 +340,7 @@ const UPDATES = [
   ["v1.11", "Keine Zeitlupe mehr bei großen Blattschneider-Völkern: Die Pilzgärten wurden in jedem Bild aus Tausenden einzelnen Pünktchen neu gezeichnet – je größer das Volk, desto größer die Gärten und desto langsamer das Spiel. Jetzt wird ihre Form nur berechnet, wenn sie wachsen, und pro Bild nur noch gefüllt. Sie sehen genauso aus wie vorher, die Gongylidien funkeln weiter."],
   ["v1.12", "Regenwald: Die Geflügelten schwärmen jetzt wie echte Blattschneider gleich zu Beginn der Regenzeit aus – nicht erst gegen Ende der Kleinen Regenzeit. Während sie warten, zeigt der Tipp, wie viele Tage es noch bis zur Regenzeit dauert – statt dazu aufzufordern, sie noch einmal zu kaufen."],
   ["v1.13", "Regenwald: Sind die Geflügelten ausgewachsen, erscheint im Ausbau-Menü der Knopf „Jetzt ausfliegen lassen“. Damit schwärmen sie sofort zum Hochzeitsflug aus, und es geht sicher weiter zu Kapitel 4 – auch wenn Regen, Nacht oder ein verschlossener Eingang sie bisher im Nest festhielten."],
+  ["v1.14", "Kapitel 4 läuft viel flüssiger: Das Biwak wurde beim nächtlichen Umzug in Dutzenden Zwischengrößen neu gezeichnet (jedes Mal bis zu 150 ms Standbild) und füllte dabei den Grafikspeicher. Jetzt wird es nur einmal gemalt und skaliert, und die Ameisenkörper im Querschnitt kommen aus einem fertigen Bild statt 1.600 Einzelzeichnungen pro Frame – bei gleichem Aussehen. Außerdem hat Kapitel 4 eigene Tipps: Sie zeigen Raubzug, Umzug und Standphase, sagen, wann eine Anpassung bezahlbar ist, und raten zum Richtungswechsel, wenn die Gegend leergefressen ist (vorher stand dort „Lass die Königin ihr erstes Ei legen!“)."],
 ];
 const SAVE_KEY = SK("ameisen-tycoon-save-v4" + (WALD ? "-wald" : ARMY ? "-schwarm" : REGEN ? "-regen" : ""));
 
@@ -7084,6 +7085,7 @@ function updateHud() {
   updateShop();
 }
 function tipText() {
+  if (ARMY) return armyTip();                                                                   // v1.14: Kapitel 4 hat eigene Tipps (vorher: „Lass die Königin ihr erstes Ei legen!“)
   const ws = workers().length;
   if (colony.cold) return colony.food < winterNeed() ? "❄️ Der Vorrat wird knapp! Jagende Ameisen bringen Springschwänze – oder spule vor und hoffe auf den Frühling." : "❄️ Winterruhe: Die Kolonie zehrt von ihren Vorräten. Mit „Winterruhe vorspulen“ geht es schnell zum Frühling.";
   const ex = activeExpansion(); if (ex) return `📐 Die Ameisen vergrößern gerade die ${CH_NAME[ex.expandOf.id]} (${Math.floor(ex.done / ex.stamps.length * 100)} %).`;
@@ -13312,9 +13314,18 @@ function buildBivouac(R) {
     for (let m = 0; m < L / 3; m++) ant(x + Math.sin(m) * 1.2, y0 + 4 + m * 3, Math.PI / 2 + (r() - 0.5) * 0.6, 0.9, 0.45); }
   return { c, cx, base, w, h, H };
 }
+// v1.14: Das Biwak wird nur noch in voller Größe gebaut und beim Umzug skaliert gezeichnet (vorher bei jeder Zwischengröße neu, je bis 150 ms, und alle Bilder blieben im Grafikspeicher).
+const BIVC = { key: -1, B: null, pending: false };
+function bivouacImage() {
+  const key = Math.round(bivR() / 4);
+  if (BIVC.key === key && BIVC.B) return BIVC.B;
+  if (!BIVC.B) { BIVC.B = buildBivouac(key * 4); BIVC.B.R = key * 4; BIVC.key = key; return BIVC.B; }
+  if (!BIVC.pending) { BIVC.pending = true; setTimeout(() => { const B = buildBivouac(key * 4); B.R = key * 4; BIVC.B = B; BIVC.key = key; BIVC.pending = false; }, 0); }   // neu bauen, solange das alte Bild weiter skaliert gezeigt wird
+  return BIVC.B;
+}
 function drawBivouacAt(u, k, cutaway) {
   const R = bivR() * Math.sqrt(Math.max(0.05, k)), v = 0.14, x = u + S.x * v, y = S.y * v;
-  const key = Math.round(R / 4); let B = BIV[key]; if (!B) B = BIV[key] = buildBivouac(Math.round(R / 4) * 4);
+  const B0 = bivouacImage(), f = R / B0.R, B = { c: B0.c, cx: B0.cx * f, base: B0.base * f, w: B0.w * f, h: B0.h * f, H: B0.H * f };
   // umgestürzter Stamm, unter dem das Biwak hängt
   const L = R * 1.9, ly = y - B.H * 0.92, lg = ctx.createLinearGradient(0, ly - 16, 0, ly + 16); lg.addColorStop(0, "#7a5a3a"); lg.addColorStop(0.5, "#4e3420"); lg.addColorStop(1, "#2a1a0e");
   ctx.save(); ctx.fillStyle = lg; ctx.beginPath(); ctx.roundRect(x - L, ly - 14, L * 2, 28, 14); ctx.fill();
@@ -13328,12 +13339,25 @@ function drawBivouacAt(u, k, cutaway) {
     drawEci(x + qq * R, y - hh, i % 9 === 0 ? "soldier" : "media", Math.sin(i + t) > 0 ? 1 : -1, Math.floor(t * 8 + i) % 3, 0.95); }
   if (cutaway) drawBivouacFace(x, y, R, B.H);
 }
+// v1.14: Die Körper im Querschnitt werden einmal in ein Bild gemalt statt in jedem Frame 1.600-mal einzeln
+const FACEC = { key: "", c: null };
+function bivouacFaceImage(Rc, Hc, y) {
+  const key = Math.round(Rc) + "|" + Math.round(Hc) + "|" + Math.round(y);
+  if (FACEC.key === key) return FACEC;
+  const sc = 2, top = Math.ceil(Math.max(Hc - y, Hc + 14)) + 4, w = Math.ceil(Rc * 2 + 8), h = top + 4;
+  const c = document.createElement("canvas"); c.width = w * sc; c.height = h * sc; const g = c.getContext("2d"); g.scale(sc, sc); g.translate(w / 2, top);   // Ursprung: Mitte unten (x, yb)
+  const P = new Path2D(); P.moveTo(-Rc, 0); for (let i = 0; i <= 30; i++) { const q = i / 30 * 2 - 1; P.lineTo(q * Rc, -(Hc - y) * Math.pow(1 - q * q, 0.6)); } P.closePath();
+  g.fillStyle = "rgba(40,18,8,.95)"; g.fill(P); g.clip(P);
+  const r = mulberry32(31); g.lineCap = "round";
+  for (let i = 0; i < Math.min(1600, Rc * Rc * 0.25); i++) { const px = (r() * 2 - 1) * Rc, py = -r() * (Hc + 14), a = r() * 6.28, lit = r(); g.save(); g.translate(px, py); g.rotate(a); g.fillStyle = rgb(mix([46, 22, 10], [150, 80, 38], lit)); g.beginPath(); g.ellipse(-2.2, 0, 1.5, 1.1, 0, 0, 7); g.ellipse(0, 0, 1.3, 0.7, 0, 0, 7); g.ellipse(1.8, 0, 0.9, 0.8, 0, 0, 7); g.fill(); g.strokeStyle = "rgba(20,8,2,.6)"; g.lineWidth = 0.4; g.beginPath(); g.moveTo(-0.6, 0); g.lineTo(-2, 2); g.moveTo(0.6, 0); g.lineTo(1.5, -2); g.stroke(); g.restore(); }
+  Object.assign(FACEC, { key, c, w, h, top }); return FACEC;
+}
 function drawBivouacFace(x, y, R, H) {                                                        // Querschnitt: Kammern aus lebenden Körpern, darin Königin und Brut
   const s = armyState(), Rc = R * 0.86, Hc = H * 0.86, yb = 0;
+  const Rf = BIVC.B ? BIVC.B.R : bivR(), fk = R / Rf, F = bivouacFaceImage(Rf * 0.86, Hc / fk, y);                  // in voller Größe gemalt, beim Umzug skaliert
+  ctx.drawImage(F.c, x - F.w / 2 * fk, yb - F.top * fk, F.w * fk, F.h * fk);
   ctx.save(); const P = new Path2D(); P.moveTo(x - Rc, yb); for (let i = 0; i <= 30; i++) { const q = i / 30 * 2 - 1; P.lineTo(x + q * Rc, yb - (Hc + (yb - y)) * Math.pow(1 - q * q, 0.6)); } P.closePath();
-  ctx.fillStyle = "rgba(40,18,8,.95)"; ctx.fill(P); ctx.clip(P);
-  const r = mulberry32(31); ctx.lineCap = "round";
-  for (let i = 0; i < Math.min(1600, Rc * Rc * 0.25); i++) { const px = x + (r() * 2 - 1) * Rc, py = yb - r() * (Hc + 14), a = r() * 6.28, lit = r(); ctx.save(); ctx.translate(px, py); ctx.rotate(a); ctx.fillStyle = rgb(mix([46, 22, 10], [150, 80, 38], lit)); ctx.beginPath(); ctx.ellipse(-2.2, 0, 1.5, 1.1, 0, 0, 7); ctx.ellipse(0, 0, 1.3, 0.7, 0, 0, 7); ctx.ellipse(1.8, 0, 0.9, 0.8, 0, 0, 7); ctx.fill(); ctx.strokeStyle = "rgba(20,8,2,.6)"; ctx.lineWidth = 0.4; ctx.beginPath(); ctx.moveTo(-0.6, 0); ctx.lineTo(-2, 2); ctx.moveTo(0.6, 0); ctx.lineTo(1.5, -2); ctx.stroke(); ctx.restore(); }
+  ctx.clip(P);
   const cham = [[0, 0.3, 0.27, 0.13], [-0.5, 0.2, 0.17, 0.09], [0.52, 0.24, 0.16, 0.08], [-0.22, 0.6, 0.15, 0.08], [0.28, 0.58, 0.14, 0.07]];
   cham.forEach(([fx, fy, rx, ry], i) => { const cx = x + fx * Rc, cy = yb - fy * (Hc + 14), wx = rx * Rc, wy = ry * (Hc + 14) + 3;
     const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, wx); g.addColorStop(0, "rgba(150,90,46,.92)"); g.addColorStop(0.7, "rgba(90,48,20,.92)"); g.addColorStop(1, "rgba(40,18,8,.6)"); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(cx, cy, wx, wy, 0, 0, 7); ctx.fill();
@@ -13509,6 +13533,24 @@ function setupArmy() {
   const h = document.querySelector("#start h1"); if (h) h.textContent = "⚔️ Kapitel 4 – Die Wanderameisen";
   const p = document.querySelector("#start p"); if (p) p.innerHTML = "Kein Nest, keine Ruhe: Ein Volk von Wanderameisen lebt in einem Biwak aus den eigenen Körpern, überfällt jeden Tag den Waldboden und zieht nachts weiter.<br><small>Wähle einen Spielstand – drei Plätze stehen dir zur Verfügung.</small>";
   document.title = "Ameisen-Tycoon – Kapitel 4: Die Wanderameisen";
+}
+function armyTip() {
+  const s = armyState();
+  if (MIG.on) return L("🌙 Umzug bei Nacht: Die Arbeiterinnen tragen alle Larven zum neuen Biwak, irgendwann folgt die Königin im Schutz der Soldatinnen.", "🌙 Moving by night: the workers carry all the larvae to the new bivouac, and at some point the queen follows, guarded by soldiers.");
+  const buy = UNLOCKS.find(u => !unlocked[u.id] && u.req() && colony.food >= u.cost);
+  if (buy) return L(`Du kannst jetzt „${buy.name}“ freischalten!`, `You can unlock “${trStr(buy.name)}” now!`);
+  if (RAID.on) return L(`⚔️ Der Raubzug läuft – bisher ${fmtN(RAID.gain || 0)} Beute. Achte auf die Ameisenvögel, die der Front folgen!`, `⚔️ The raid is on – ${fmtN(RAID.gain || 0)} prey so far. Watch the antbirds following the front!`);
+  const ci = clamp(Math.floor((s.u - WX0) / CELL_W), 0, ARMY_CELLS - 1), reach = Math.max(2, Math.ceil(raidLen() / CELL_W));
+  let sum = 0, n = 0; for (let i = 1; i <= reach; i++) { const j = ci + i * s.raidDir; if (j < 0 || j >= ARMY_CELLS) break; sum += s.cells[j]; n++; }
+  if (A.hungerT || n === 0 || sum / n < 0.35) return L("🧭 In dieser Richtung gibt es kaum noch Beute. Tippe unten auf den Raubzug-Knopf und wechsle die Richtung – dort hat sich die Gegend erholt.", "🧭 There's hardly any prey left in this direction. Tap the raid button below to switch direction – the forest floor there has recovered.");
+  const dCreek = (armyCreekU() - s.u) * s.raidDir;
+  if (!unlocked.livebridge && dCreek > 0 && dCreek < raidLen() && colony.food < 380) return L("🌊 Der Bach stoppt die Schwarmfront. Mit der Anpassung „Lebende Brücken“ kommt dein Volk hinüber – oder wechsle die Richtung.", "🌊 The creek stops the swarm front. With the adaptation “Living bridges” your colony can cross – or switch direction.");
+  const next = UNLOCKS.find(u => !unlocked[u.id] && u.req());
+  if (next) return colony.food >= next.cost ? L(`Du kannst jetzt „${next.name}“ freischalten!`, `You can unlock “${trStr(next.name)}” now!`) : L(`Spare Beute für „${next.name}“ (${next.cost} 🦗).`, `Save up prey for “${trStr(next.name)}” (${next.cost} 🦗).`);
+  if (s.phase === "stat") return L(`🏕️ Standphase (Tag ${s.pday}/${ARMY_STAT}): Die Königin legt Zehntausende Eier, die Puppen reifen. Die Raubzüge sind jetzt kleiner, umgezogen wird nicht.`, `🏕️ Stationary phase (day ${s.pday}/${ARMY_STAT}): the queen lays tens of thousands of eggs while the pupae mature. Raids are smaller now and the colony doesn't move.`);
+  const lock = UNLOCKS.find(u => !unlocked[u.id]);
+  if (lock) return L(`Lass dein Volk weiter wachsen – „${lock.name}“: ${lock.reqTxt}.`, `Keep growing your colony – “${trStr(lock.name)}”: ${trStr(lock.reqTxt)}.`);
+  return L("⚔️ Alle Anpassungen sind freigeschaltet – dein Wanderameisen-Volk ist der Schrecken des Waldbodens. Lass es weiter wachsen!", "⚔️ All adaptations are unlocked – your army ant colony is the terror of the forest floor. Keep it growing!");
 }
 function updateRaidBtn() { const s = armyState(); $("eggBtn").textContent = s.raidDir > 0 ? "⚔️ Raubzug: rechts →" : "← Raubzug: links ⚔️"; $("eggBtn").title = "Richtung des nächsten Raubzugs und der Wanderung. Wanderameisen leeren die Gegend – zieh dorthin, wo noch Beute ist."; }
 // =====================================================================
