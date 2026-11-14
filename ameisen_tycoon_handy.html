@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#120c07"><meta name="format-detection" content="telephone=no">
-<script id="apkUpd0">(function(){var OWN=102;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
+<script id="apkUpd0">(function(){var OWN=103;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
 try{var v=R.ver();if(v>OWN){var n=+(localStorage.getItem('at_ub')||0);if(n>=3){R.clear();localStorage.setItem('at_ub','0');}
 else{localStorage.setItem('at_ub',String(n+1));R.boot();window.stop();}}else if(v&&v<OWN)R.clear();}catch(e){}})();</script>
 <title>Ameisen-Simulator</title>
@@ -224,7 +224,7 @@ const WALD = CHAPTER === "wald", ARMY = CHAPTER === "schwarm", REGEN = CHAPTER =
 // =====================================================================
 //  Ameisen-Tycoon – 2,5D-Querschnitt durch den Ameisenbau
 // =====================================================================
-const VERSION = "v1.02";
+const VERSION = "v1.03";
 const UPDATES = [
   ["v0.1", "Prototyp: eine Ameise sucht Futter an der Oberfläche."],
   ["v0.2", "Blick in den Bau: Königin, Eier, Larven, Puppen und Arbeiterinnen. Musik und Höhlen-Geräusche."],
@@ -329,6 +329,7 @@ const UPDATES = [
   ["v1.00", "Zwei Fehler behoben: Im Winter wurden die Fichten und Kiefern im Waldhintergrund zu blassen, fast durchsichtigen Dreiecken – jetzt bleiben sie dunkelgrün und tragen Schneelasten auf den Zweigen. Im Regenwald wurden nachts nur der Stamm des Kapokbaums dunkel, die großen Brettwurzeln leuchteten weiter hell – jetzt legt sich die Nacht über den ganzen Baum."],
   ["v1.01", "Die Wiese genau durchgesehen und Fehler behoben: Bei Regen strahlten Sonne und Mond weiter durch die Wolken – jetzt verschwinden sie dahinter. Im Winter lag die Schneehaube des Erdhügels als durchsichtiges Oval über den Ameisen und ragte in die Erde – jetzt liegt sie nur auf dem Hügel. Die Frühlingsbilanz („Gut vorgesorgt!“) kam im Zeitraffer erst Tage später und meldete manchmal „0 Frühlingseier“ – jetzt kommt sie pünktlich und ohne die Null."],
   ["v1.02", "Fehler behoben: Das kleine Mädchen mit den Zöpfen schrumpfte auf etwa die halbe Größe, sobald es sich auf die Schaukel setzte – beim Hinlaufen, Abspringen und Winken war es viel größer. Jetzt ist es auf der Schaukel genauso groß wie vorher, die Seile reichen bis zum Ast, und das Schaukelbrett ist auch ohne Kind so breit, dass ein Kind darauf Platz hat."],
+  ["v1.03", "Schneller auf schwächeren Rechnern: Die Erdschichten mit ihrer Körnung werden nicht mehr in jedem Bild neu zusammengesetzt, sondern nur, wenn sich die Ansicht oder die Gänge ändern. Neu ist eine Leistungsautomatik: Ruckelt das Bild, senkt das Spiel unauffällig Auflösung und Detailmenge in bis zu drei Stufen – läuft es wieder flüssig, wird die volle Qualität zurückgeholt."],
 ];
 const SAVE_KEY = SK("ameisen-tycoon-save-v4" + (WALD ? "-wald" : ARMY ? "-schwarm" : REGEN ? "-regen" : ""));
 
@@ -523,7 +524,9 @@ const [inner, ig] = mk();
 ig.drawImage(earth, WX0, 0, WW, DEPTH);
 ig.fillStyle = "rgba(22,12,5,.42)"; ig.fillRect(WX0, 0, WW, DEPTH);
 
+let SOILV = 0;                                                                                   // ändert sich, sobald irgendwo gegraben wird
 function carve(path, bx, by, bw, bh, shadow = true) {
+  SOILV++;
   fg.save();
   fg.globalCompositeOperation = "destination-out"; fg.fill(path);
   fg.globalCompositeOperation = "source-atop";
@@ -541,6 +544,7 @@ function carve(path, bx, by, bw, bh, shadow = true) {
   if (shadow) updateShadow(bx, by, bw, bh);
 }
 function updateShadow(bx, by, bw, bh) {
+  SOILV++;
   silRegion(bx, by, bw, bh);
   const m = 40, M = 70;
   const X = Math.max(0, (bx - m - WX0) * RES) | 0, Y = Math.max(0, (by - m) * RES) | 0;
@@ -4623,7 +4627,7 @@ function goldenK(di, gloom) { return di.sun > -0.12 ? clamp(1 - Math.abs(di.sun 
 function drawGolden(di, L, gloom) {
   const g = goldenK(di, gloom), noon = clamp((di.sun - 0.75) * 3, 0, 1) * (1 - gloom);
   if (g > 0.02) { ctx.fillStyle = `rgba(255,145,55,${0.2 * g})`; ctx.fillRect(WX0 - 1500, SKY_TOP - 100, WW + 3000, -SKY_TOP + 100); }
-  if (noon > 0.02) { ctx.save(); ctx.globalCompositeOperation = "soft-light"; ctx.fillStyle = `rgba(255,255,240,${0.18 * noon})`; ctx.fillRect(WX0 - 1500, SKY_TOP - 100, WW + 3000, -SKY_TOP + 100); ctx.restore(); }
+  if (noon > 0.02 && PERF.lv === 0) { ctx.save(); ctx.globalCompositeOperation = "soft-light"; ctx.fillStyle = `rgba(255,255,240,${0.18 * noon})`; ctx.fillRect(WX0 - 1500, SKY_TOP - 100, WW + 3000, -SKY_TOP + 100); ctx.restore(); }
 }
 // ---------- Wetter ----------
 function fogInfo(di, si) {
@@ -5084,7 +5088,7 @@ function clampCam() {
 const toWorld = (sx, sy) => [(sx - VW / 2) / cam.zoom + cam.x, (sy - VH / 2) / cam.zoom + cam.y];
 const toScreenX = wx => (wx - cam.x) * cam.zoom + VW / 2;
 function resize() {
-  DPR = window.devicePixelRatio || 1; VW = innerWidth; VH = innerHeight;
+  DPR = perfDPR(); VW = innerWidth; VH = innerHeight;
   canvas.width = VW * DPR; canvas.height = VH * DPR;
   canvas.style.width = VW + "px"; canvas.style.height = VH + "px";
   clampCam();
@@ -5106,6 +5110,21 @@ function antLocal(a, lx, ly) {
 }
 // Detail-Budget: nur die Ameisen nahe der Bildmitte werden voll detailliert gezeichnet
 let DETAIL_MAX = 45;
+// Leistungsautomatik: misst, wie flüssig das Bild läuft, und passt Auflösung und Detailmenge an (Stufe 0 = volle Qualität)
+const PERF = { lv: (navigator.deviceMemory && navigator.deviceMemory <= 4) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) ? 1 : 0, ema: 16.7, slow: 0, fast: 0, t0: 0, last: 0, wait: 12000, upAt: -1e9 };   // schwache Geräte starten eine Stufe niedriger
+const PERF_SCALE = [1, 0.85, 0.72, 0.6], PERF_DET = [45, 30, 18, 10];
+function perfDPR() { const d = window.devicePixelRatio || 1; return PERF.lv === 0 ? d : Math.min(d, 1) * PERF_SCALE[PERF.lv]; }
+function perfTick(now) {
+  if (!PERF.last) { PERF.last = now; PERF.t0 = now; return; }
+  const dt = now - PERF.last; PERF.last = now;
+  if (dt > 250 || document.hidden || film || now - PERF.t0 < 4000) return;              // Pausen, Filme und die ersten Sekunden nicht mitzählen
+  PERF.ema += (dt - PERF.ema) * 0.05;
+  if (PERF.ema > 27) { PERF.slow += dt; PERF.fast = 0; } else if (PERF.ema < 18) { PERF.fast += dt; PERF.slow = 0; } else { PERF.slow = Math.max(0, PERF.slow - dt); PERF.fast = 0; }
+  let to = PERF.lv;
+  if (PERF.slow > 2500 && PERF.lv < 3) { to = PERF.lv + 1; if (now - PERF.upAt < 9000) PERF.wait = Math.min(PERF.wait * 2, 180000); }   // Aufstieg gescheitert: nächstes Mal länger warten
+  else if (PERF.fast > PERF.wait && PERF.lv > 0) { to = PERF.lv - 1; PERF.upAt = now; }
+  if (to !== PERF.lv) { PERF.lv = to; PERF.slow = PERF.fast = 0; PERF.ema = 20; DETAIL_MAX = PERF_DET[to]; try { resize(); } catch (e) {} }
+}
 function markDetail() {
   const vis = [];
   for (const a of ants) {
@@ -6777,6 +6796,7 @@ function drawBlueprint(p, preview) {
 let speed = 0, realTime = 0, last = performance.now(), previewId = null;
 let storyRdt = 0;
 function frame(now) {
+  perfTick(now);
   const rdt = clamp((now - last) / 1000, 0, 0.05); last = now; realTime += rdt; storyRdt = rdt;
   for (let i = 0, n = colony.skipWinter ? 40 : speed; i < n; i++) simUpdate(rdt);
   markDetail();
@@ -9010,6 +9030,7 @@ function forestAmbience() {                                                    /
 }
 // --- Waldstimmung im Bild: Lichtstaub, fallende Nadeln, grünliches Waldlicht ---
 function drawForestMotes(di, si) {
+  if (PERF.lv >= 2) return;
   const k = clamp(di.sun * 2.5, 0, 1) * (colony.rain ? 0.2 : 1); if (k < 0.05) return;
   ctx.save(); ctx.globalCompositeOperation = "lighter";
   const [mx0] = toWorld(-20, 0), [mx1] = toWorld(VW + 20, 0);
@@ -12426,17 +12447,21 @@ function soilFill(g, k) {
   g.globalAlpha = k * 0.75; g.fillStyle = soilPat; g.fillRect(vx0, y0, vx1 - vx0, y1 - y0); g.globalAlpha = 1;
 }
 // die vordere Erde hat Löcher (Gänge, Kammern): Körnung nur auf die Erde selbst legen – über eine Zwischenfläche
-const GSCR = document.createElement("canvas"), gscr = GSCR.getContext("2d");
+const GSCR = document.createElement("canvas"), gscr = GSCR.getContext("2d"), ISCR = document.createElement("canvas"), iscr = ISCR.getContext("2d");
 { const _dwc = drawWorldCanvas;
   drawWorldCanvas = function (cv) {
     const k = gfxSoilK();
     if (k <= 0 || (cv !== inner && cv !== frontS)) return _dwc(cv);
-    if (cv === inner) { _dwc(cv); soilFill(ctx, k * 0.8); return; }
-    const w = canvas.width, h = canvas.height; if (!w || !h) return _dwc(cv); if (GSCR.width !== w || GSCR.height !== h) { GSCR.width = w; GSCR.height = h; }
-    const T = ctx.getTransform(), c0 = ctx;
-    gscr.setTransform(1, 0, 0, 1, 0, 0); gscr.clearRect(0, 0, w, h); gscr.setTransform(T);
-    ctx = gscr; try { _dwc(cv); gscr.globalCompositeOperation = "source-atop"; soilFill(gscr, k); gscr.globalCompositeOperation = "source-over"; } finally { ctx = c0; }
-    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(GSCR, 0, 0); ctx.restore();
+    const w = canvas.width, h = canvas.height; if (!w || !h) return _dwc(cv);
+    const T = ctx.getTransform(), key = `${SOILV}|${Math.floor(realTime)}|${w}x${h}|${T.a.toFixed(4)}|${Math.round(T.e)}|${Math.round(T.f)}|${Math.round(k * 20)}`;
+    const C = cv === inner ? ISCR : GSCR, g = cv === inner ? iscr : gscr, kk = cv === inner ? k * 0.8 : k;
+    if (C._key !== key) {                                                                     // nur neu zusammensetzen, wenn sich etwas geändert hat
+      if (C.width !== w || C.height !== h) { C.width = w; C.height = h; }
+      const c0 = ctx; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h); g.setTransform(T);
+      ctx = g; try { _dwc(cv); g.globalCompositeOperation = cv === inner ? "source-over" : "source-atop"; soilFill(g, kk); g.globalCompositeOperation = "source-over"; } finally { ctx = c0; }
+      C._key = key;
+    }
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(C, 0, 0); ctx.restore();
   };
 }
 
@@ -12647,17 +12672,17 @@ drawHog = function () {
 function drawGrade(di, L, SI, gloom) {
   ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   const hz = clamp((0 - cam.y) * cam.zoom + VH / 2, 0, VH), day = clamp((L - 0.25) / 0.6, 0, 1) * (1 - gloom * 0.7);
-  if (hz > 4 && day > 0) {
+  if (hz > 4 && day > 0 && PERF.lv === 0) {                                                   // Farbstimmung per „weiches Licht“ – teuer, nur in voller Qualität
     const warm = GFXB === "wald" ? [255, 222, 160] : GFXB === "regen" ? [236, 255, 190] : [255, 214, 150];
     const gr = ctx.createLinearGradient(0, 0, 0, hz); gr.addColorStop(0, rgb(warm, 1, 0.42 * day)); gr.addColorStop(0.7, rgb(warm, 1, 0.12 * day)); gr.addColorStop(1, rgb(warm, 1, 0));
     ctx.globalCompositeOperation = "soft-light"; ctx.fillStyle = gr; ctx.fillRect(0, 0, VW, hz);
     if (GFXB !== "wiese") { const cool = ctx.createLinearGradient(0, hz * 0.4, 0, hz); cool.addColorStop(0, "rgba(20,60,50,0)"); cool.addColorStop(1, `rgba(20,60,50,${0.35 * day})`); ctx.fillStyle = cool; ctx.fillRect(0, hz * 0.4, VW, hz * 0.6); }   // kühle Schatten am Waldboden
     ctx.globalCompositeOperation = "source-over";
   }
-  if (hz < VH) { const ug = ctx.createLinearGradient(0, hz, 0, VH); ug.addColorStop(0, "rgba(255,190,120,.10)"); ug.addColorStop(1, "rgba(255,190,120,0)");   // warmes Glimmen im Bau
+  if (hz < VH && PERF.lv === 0) { const ug = ctx.createLinearGradient(0, hz, 0, VH); ug.addColorStop(0, "rgba(255,190,120,.10)"); ug.addColorStop(1, "rgba(255,190,120,0)");   // warmes Glimmen im Bau
     ctx.globalCompositeOperation = "soft-light"; ctx.fillStyle = ug; ctx.fillRect(0, hz, VW, VH - hz); ctx.globalCompositeOperation = "source-over"; }
-  const m = Math.max(VW, VH), vg = ctx.createRadialGradient(VW / 2, VH / 2, m * 0.38, VW / 2, VH / 2, m * 0.78);
-  vg.addColorStop(0, "rgba(10,6,4,0)"); vg.addColorStop(1, `rgba(10,6,4,${film ? 0.2 : 0.3})`); ctx.fillStyle = vg; ctx.fillRect(0, 0, VW, VH);
+  if (PERF.lv < 2) { const m = Math.max(VW, VH), vg = ctx.createRadialGradient(VW / 2, VH / 2, m * 0.38, VW / 2, VH / 2, m * 0.78);
+  vg.addColorStop(0, "rgba(10,6,4,0)"); vg.addColorStop(1, `rgba(10,6,4,${film ? 0.2 : 0.3})`); ctx.fillStyle = vg; ctx.fillRect(0, 0, VW, VH); }
   ctx.restore();
 }
 
