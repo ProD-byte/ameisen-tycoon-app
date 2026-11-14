@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#120c07"><meta name="format-detection" content="telephone=no">
-<script id="apkUpd0">(function(){var OWN=101;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
+<script id="apkUpd0">(function(){var OWN=102;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
 try{var v=R.ver();if(v>OWN){var n=+(localStorage.getItem('at_ub')||0);if(n>=3){R.clear();localStorage.setItem('at_ub','0');}
 else{localStorage.setItem('at_ub',String(n+1));R.boot();window.stop();}}else if(v&&v<OWN)R.clear();}catch(e){}})();</script>
 <title>Ameisen-Simulator</title>
@@ -224,7 +224,7 @@ const WALD = CHAPTER === "wald", ARMY = CHAPTER === "schwarm", REGEN = CHAPTER =
 // =====================================================================
 //  Ameisen-Tycoon – 2,5D-Querschnitt durch den Ameisenbau
 // =====================================================================
-const VERSION = "v1.01";
+const VERSION = "v1.02";
 const UPDATES = [
   ["v0.1", "Prototyp: eine Ameise sucht Futter an der Oberfläche."],
   ["v0.2", "Blick in den Bau: Königin, Eier, Larven, Puppen und Arbeiterinnen. Musik und Höhlen-Geräusche."],
@@ -328,6 +328,7 @@ const UPDATES = [
   ["v0.99", "Der Wald ist kein Einheitsbrei mehr: Neben Fichten wachsen jetzt Kiefern mit fuchsroter Spiegelrinde und Schirmkrone, Lärchen mit lichter Krone (im Herbst goldgelb, im Winter kahl), knorrige Eichen, Buchen mit Astnarben, Efeu und Zwieseln, Birken mit Hängezweigen sowie tote Bäume mit zersplitterter Spitze, Spechtlöchern und Baumpilzen. Jeder Baum ist anders: dünne Jungbäume und dicke Altbäume, leicht schief gewachsen, mit eigener Kronenform, Färbung, Moos und manchmal gebrochener Spitze."],
   ["v1.00", "Zwei Fehler behoben: Im Winter wurden die Fichten und Kiefern im Waldhintergrund zu blassen, fast durchsichtigen Dreiecken – jetzt bleiben sie dunkelgrün und tragen Schneelasten auf den Zweigen. Im Regenwald wurden nachts nur der Stamm des Kapokbaums dunkel, die großen Brettwurzeln leuchteten weiter hell – jetzt legt sich die Nacht über den ganzen Baum."],
   ["v1.01", "Die Wiese genau durchgesehen und Fehler behoben: Bei Regen strahlten Sonne und Mond weiter durch die Wolken – jetzt verschwinden sie dahinter. Im Winter lag die Schneehaube des Erdhügels als durchsichtiges Oval über den Ameisen und ragte in die Erde – jetzt liegt sie nur auf dem Hügel. Die Frühlingsbilanz („Gut vorgesorgt!“) kam im Zeitraffer erst Tage später und meldete manchmal „0 Frühlingseier“ – jetzt kommt sie pünktlich und ohne die Null."],
+  ["v1.02", "Fehler behoben: Das kleine Mädchen mit den Zöpfen schrumpfte auf etwa die halbe Größe, sobald es sich auf die Schaukel setzte – beim Hinlaufen, Abspringen und Winken war es viel größer. Jetzt ist es auf der Schaukel genauso groß wie vorher, die Seile reichen bis zum Ast, und das Schaukelbrett ist auch ohne Kind so breit, dass ein Kind darauf Platz hat."],
 ];
 const SAVE_KEY = SK("ameisen-tycoon-save-v4" + (WALD ? "-wald" : ARMY ? "-schwarm" : REGEN ? "-regen" : ""));
 
@@ -13503,25 +13504,28 @@ function drawMill() {
 // =====================================================================
 //  v0.82 Schaukel: Brett und Seile schwingen als Einheit, das Mädchen sitzt darauf, greift die Seile und holt richtig Schwung
 // =====================================================================
-const SW_ROPE = [-3.5, 4.5];                                                                  // hinteres und vorderes Seil (im Seil-Koordinatensystem)
-function swingRope(x, L) { ctx.strokeStyle = "#d8c8a0"; ctx.lineWidth = 1.5; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(x * 0.5, 0); ctx.lineTo(x, L); ctx.stroke(); ctx.strokeStyle = "rgba(120,100,70,.5)"; ctx.lineWidth = 0.4; ctx.beginPath(); ctx.moveTo(x * 0.5 + 0.5, 0); ctx.lineTo(x + 0.5, L); ctx.stroke(); }
+const SW_ROPE = [-3.5, 4.5], SW_GIRL_K = 1.8;   // SW_GIRL_K: Schaukel-Mädchen so groß wie beim Gehen                                                                  // hinteres und vorderes Seil (im Seil-Koordinatensystem)
+function swingRope(x, L, y0 = 0, x0 = x * 0.5, w = 1) { ctx.strokeStyle = "#d8c8a0"; ctx.lineWidth = 1.5 * w; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x, L); ctx.stroke(); ctx.strokeStyle = "rgba(120,100,70,.5)"; ctx.lineWidth = 0.4 * w; ctx.beginPath(); ctx.moveTo(x0 + 0.5 * w, y0); ctx.lineTo(x + 0.5 * w, L); ctx.stroke(); }
 function swingBoard(L) { const bg = ctx.createLinearGradient(0, L - 2, 0, L + 3); bg.addColorStop(0, "#a87c50"); bg.addColorStop(1, "#6a4a2c"); ctx.fillStyle = bg; ctx.beginPath(); ctx.roundRect(-11, L - 1.5, 22, 4.5, 1.5); ctx.fill(); ctx.fillStyle = "rgba(255,230,190,.3)"; ctx.fillRect(-10, L - 1.5, 20, 1); }
 drawSwing = function () {
   if (!swingOn()) return; const g = swingGeo();
-  ctx.save(); ctx.translate(g.px, g.py); ctx.rotate(-swing.a); swingRope(SW_ROPE[0], g.L); swingBoard(g.L); swingRope(SW_ROPE[1], g.L); ctx.restore();
+  const K = SW_GIRL_K, L = g.L; ctx.save(); ctx.translate(g.px, g.py); ctx.rotate(-swing.a); swingRope(SW_ROPE[0] * K, L, 0, SW_ROPE[0] * 0.5);
+  ctx.save(); ctx.translate(0, L); ctx.scale(K, K); ctx.translate(0, -L); swingBoard(L); ctx.restore(); swingRope(SW_ROPE[1] * K, L, 0, SW_ROPE[1] * 0.5); ctx.restore();   // Brett so groß wie mit Mädchen
   ell(g.px, g.py + 1, 6, 2.6, 0, "#cbb890");                                                    // Seil um den Ast geschlungen
 };
 function drawSwingGirl(q) {
   const g = swingGeo(), L = g.L, t = realTime;
   q._p = (q._p || 0) + (clamp(swing.v * 1.5, -1, 1) - (q._p || 0)) * 0.12; const P = q._p, fw = Math.max(0, P), bw = Math.max(0, -P);   // P > 0: Schwung nach vorn
   const skin = rgb(q.skin || [242, 208, 182]), skinD = rgb(mix(q.skin || [242, 208, 182], [150, 90, 70], 0.3)), dress = q.shirt || [246, 150, 176], skirt = q.skirt || [236, 120, 150], hair = q.hair || [176, 110, 58], bow = q.pigtails || [220, 60, 90], shoe = rgb(q.shoe || [200, 50, 60]);
-  ell(g.sx, S.y * SWV + 2, 13, 3, 0, "rgba(0,0,0,.18)");                                        // Schatten wandert mit
-  ctx.save(); ctx.translate(g.px, g.py); ctx.rotate(-swing.a); ctx.lineCap = "round"; ctx.lineJoin = "round";
+  const K = SW_GIRL_K, yT = L - L / K;                                                            // Maßstab wie das gehende Mädchen (drawPerson, sc 0,5)
+  ell(g.sx, S.y * SWV + 2, 13 * K, 3 * K * 0.8, 0, "rgba(0,0,0,.18)");                          // Schatten wandert mit
+  ctx.save(); ctx.translate(g.px, g.py); ctx.rotate(-swing.a); ctx.translate(0, L); ctx.scale(K, K); ctx.translate(0, -L); ctx.lineCap = "round"; ctx.lineJoin = "round";   // um den Sitz vergrößert
+  const ropeX = (xb, y) => lerp(xb * 0.5 / K, xb, clamp((y - yT) / (L - yT), 0, 1)), rope = xb => swingRope(xb, L, yT, xb * 0.5 / K, 1 / K);   // Seile reichen weiter bis zum Ast
   const hip = [-3.2, L - 4.5], lean = -0.14 - 0.44 * fw + 0.05 * bw;                              // nach vorn: weit zurücklehnen; zurück: aufrichten
   const sh = [hip[0] + Math.sin(lean) * 15, hip[1] - Math.cos(lean) * 15];
   const thA = -0.12 - 0.28 * fw + 0.1 * bw, knee = [hip[0] + Math.cos(thA) * 10.5, hip[1] + Math.sin(thA) * 10.5];
   const shA = lerp(2.0, 0.12, (P + 1) / 2) + thA * 0.5, foot = [knee[0] + Math.cos(shA) * 11.5, knee[1] + Math.sin(shA) * 11.5];   // Beine strecken beim Vorschwung, anziehen beim Rückschwung
-  const handY = L - 25 - fw * 2, hand = k => [SW_ROPE[k] * (0.5 + 0.5 * handY / L), handY + (k ? 0 : -1.5)];
+  const handY = L - 25 - fw * 2, hand = k => [ropeX(SW_ROPE[k], handY), handY + (k ? 0 : -1.5)];
   const arm = (k, far) => { const H = hand(k), dx = H[0] - sh[0], dy = H[1] - sh[1], d = Math.min(16.6, Math.hypot(dx, dy)), a = Math.atan2(dy, dx), hh = Math.sqrt(Math.max(0, 8.4 * 8.4 - d * d / 4));
     const el = [sh[0] + Math.cos(a) * d / 2 + Math.cos(a + Math.PI / 2) * hh, sh[1] + Math.sin(a) * d / 2 + Math.sin(a + Math.PI / 2) * hh];          // Ellbogen hängt nach unten
     ctx.strokeStyle = far ? skinD : skin; ctx.lineWidth = 2.7; ctx.beginPath(); ctx.moveTo(sh[0], sh[1]); ctx.lineTo(el[0], el[1]); ctx.lineTo(H[0], H[1]); ctx.stroke();
@@ -13529,7 +13533,7 @@ function drawSwingGirl(q) {
   const legs = far => { const o = far ? -1.2 : 0, c = far ? skinD : skin; ctx.strokeStyle = c; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(hip[0], hip[1] + o); ctx.lineTo(knee[0], knee[1] + o); ctx.lineTo(foot[0] - (far ? 1.5 : 0), foot[1] + o); ctx.stroke();
     ctx.strokeStyle = "#fbfbf6"; ctx.lineWidth = 3.4; ctx.beginPath(); ctx.moveTo(lerp(knee[0], foot[0], 0.72), lerp(knee[1], foot[1], 0.72) + o); ctx.lineTo(foot[0] - (far ? 1.5 : 0), foot[1] + o); ctx.stroke();                         // Söckchen
     ctx.save(); ctx.translate(foot[0] - (far ? 1.5 : 0), foot[1] + o); ctx.rotate(shA - Math.PI / 2 + 0.25); ctx.fillStyle = far ? "#a02838" : shoe; ctx.beginPath(); ctx.ellipse(1.6, 0.6, 3.6, 1.9, 0, 0, 7); ctx.fill(); ctx.restore(); };
-  swingRope(SW_ROPE[0], L); const H0 = arm(0, true); ell(H0[0], H0[1], 1.7, 1.9, 0, skinD);  // hintere Hand am hinteren Seil
+  rope(SW_ROPE[0]); const H0 = arm(0, true); ell(H0[0], H0[1], 1.7, 1.9, 0, skinD);  // hintere Hand am hinteren Seil
   legs(true); swingBoard(L);
   const tg = ctx.createLinearGradient(sh[0] - 5, 0, sh[0] + 6, 0); tg.addColorStop(0, rgb(mix(dress, [120, 60, 80], 0.25))); tg.addColorStop(1, rgb(mix(dress, [255, 255, 255], 0.15)));
   ctx.strokeStyle = tg; ctx.lineWidth = 8.6; ctx.beginPath(); ctx.moveTo(hip[0], hip[1] - 1); ctx.lineTo(sh[0], sh[1] + 2.5); ctx.stroke();                                                                                              // Kleid-Oberteil
@@ -13565,7 +13569,7 @@ function drawSwingGirl(q) {
   ctx.strokeStyle = "#b0505a"; ctx.lineWidth = 0.75; ctx.beginPath(); ctx.arc(4.4, 2.4, 1.9 + fw * 0.5, 0.35, Math.PI * 0.82); ctx.stroke();
   if (fw > 0.5) { ctx.fillStyle = "#9a3040"; ctx.beginPath(); ctx.moveTo(2.9, 3.2); ctx.quadraticCurveTo(4.6, 5.6, 6, 3.3); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#fff"; ctx.fillRect(3.5, 3.25, 2, 0.6); }                             // offener, lachender Mund mit Zähnchen
   ctx.restore();
-  swingRope(SW_ROPE[1], L); const H1 = arm(1, false);                                                                                                                                                                                       // vordere Hand umschließt das vordere Seil
+  rope(SW_ROPE[1]); const H1 = arm(1, false);                                                                                                                                                                                       // vordere Hand umschließt das vordere Seil
   ell(H1[0], H1[1], 1.9, 2.1, 0, skin); ctx.strokeStyle = skinD; ctx.lineWidth = 0.6; for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(H1[0] - 1.6, H1[1] + i * 1.1); ctx.lineTo(H1[0] + 1.6, H1[1] + i * 1.1 - 0.4); ctx.stroke(); }   // Finger
   ctx.restore();
 }
