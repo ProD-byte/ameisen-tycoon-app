@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#120c07"><meta name="format-detection" content="telephone=no">
-<script id="apkUpd0">(function(){var OWN=117;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
+<script id="apkUpd0">(function(){var OWN=118;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
 try{var v=R.ver();if(v>OWN){var n=+(localStorage.getItem('at_ub')||0);if(n>=3){R.clear();localStorage.setItem('at_ub','0');}
 else{localStorage.setItem('at_ub',String(n+1));R.boot();window.stop();}}else if(v&&v<OWN)R.clear();}catch(e){}})();</script>
 <title>Ameisen-Simulator</title>
@@ -231,7 +231,7 @@ const WALD = CHAPTER === "wald", ARMY = CHAPTER === "schwarm", REGEN = CHAPTER =
 // =====================================================================
 //  Ameisen-Tycoon – 2,5D-Querschnitt durch den Ameisenbau
 // =====================================================================
-const VERSION = "v1.17";
+const VERSION = "v1.18";
 const UPDATES = [
   ["v0.1", "Prototyp: eine Ameise sucht Futter an der Oberfläche."],
   ["v0.2", "Blick in den Bau: Königin, Eier, Larven, Puppen und Arbeiterinnen. Musik und Höhlen-Geräusche."],
@@ -351,6 +351,7 @@ const UPDATES = [
   ["v1.15", "Kapitel 4: Der Raubzug-Knopf zeigt jetzt, wie viel Beute in der gewählten Richtung noch liegt (🦗🦗🦗 viel, 🦗🦗 etwas, 🦗 kaum) – so lohnt sich die Wahl zwischen links und rechts. Tipps zeigen während Raubzug und Standphase, wann wie viele neue Arbeiterinnen schlüpfen; die täglichen Verluste werden so vom Nachwuchs sichtbar mehr als ausgeglichen. Ein neues Wanderameisen-Volk startet kurz vor dem ersten Schlupf, statt erst eine Woche lang nur Ameisen zu verlieren."],
   ["v1.16", "Kapitel 4 zum Mitmachen: 👆 Fliehende Grillen, Schaben und Spinnen vor der Schwarmfront antippen – dann schnappen die Soldatinnen sie (sonst holt sie ein Ameisenvogel). 🎯 Auf dem Waldboden liegen Ziele – Termitenhügel, fremde Ameisennester und Wespennester; antippen, Beute und Verluste abwägen und zum Ziel des nächsten Raubzugs machen. 🌙 Jeden Abend der Wanderphase wählst du den Biwakplatz: gleich nebenan (ungeschützt bei Regen), zwischen Brettwurzeln oder im hohlen Baumstamm weit im frischen Jagdgebiet (langer Weg). 🌀 Läuft ein Trupp in der Ameisenmühle im Kreis, ziehst du mit dem Finger eine neue Duftspur zum Biwak und rettest ihn. 👑 Und Kapitel 4 hat ein Ziel: Ab 250.000 Arbeiterinnen teilt sich das Volk – mit eigenem Film."],
   ["v1.17", "Kapitel 4 erklärt sich jetzt selbst: Beim ersten Start zeigt eine kurze Anleitung, wie du dein Wanderameisen-Volk lenkst – keine Eier legen, Raubzug-Richtung wählen, Beute wird zu Nachwuchs, Stand- und Wanderphase, Mitmachen und das große Ziel. Über den neuen ❓-Knopf neben dem Raubzug-Knopf lässt sie sich jederzeit wieder öffnen; solange sie offen ist, pausiert das Spiel."],
+  ["v1.18", "Jedes Kapitel lässt sich jetzt einzeln neu beginnen: Im Menü öffnet „📖 Kapitel neu beginnen“ eine Liste aller freigeschalteten Kapitel mit ihrem Stand. Ein Kapitel startet von vorn, während die anderen Kapitel, das Buch und die übrigen Spielstände erhalten bleiben. „↺ Diesen Spielstand neu beginnen“ setzt weiterhin alles zurück."],
 ];
 const SAVE_KEY = SK("ameisen-tycoon-save-v4" + (WALD ? "-wald" : ARMY ? "-schwarm" : REGEN ? "-regen" : ""));
 
@@ -16063,6 +16064,64 @@ addEventListener("keydown", e => { if (e.key === "Escape" && slotsModal.classLis
 { const b = document.createElement("button"); b.id = "slotsBtn"; b.textContent = `💾 Spielstände (Platz ${SLOT})`; b.onclick = openSlots; $("resetBtn").before(b); }
 $("resetBtn").textContent = "↺ Diesen Spielstand neu beginnen";
 $("resetBtn").onclick = () => { if (!confirm(L(`Spielstand ${SLOT} wirklich löschen und neu beginnen?`, `Really delete save ${SLOT} and start over?`))) return; noSave = true; slotClear(SLOT); slotGo(SLOT, "wiese"); };
+// =====================================================================
+//  v1.18 Jedes Kapitel lässt sich einzeln neu beginnen – die anderen Kapitel, das Buch und die übrigen Spielstände bleiben erhalten
+// =====================================================================
+const CH_SAVE = ch => "ameisen-tycoon-save-v4" + (ch === "wald" ? "-wald" : ch === "regen" ? "-regen" : ch === "schwarm" ? "-schwarm" : "");
+const CH_ICON4 = { wiese: "🌾", wald: "🌲", regen: "🌴", schwarm: "⚔️" };
+(() => { const st = document.createElement("style"); st.textContent = `
+  #chapModal { position: fixed; inset: 0; z-index: 25; display: none; align-items: center; justify-content: center; background: rgba(10,6,3,.55); backdrop-filter: blur(6px); }
+  #chapModal.on { display: flex; animation: sFade .25s ease; }
+  #chapModal .box { width: min(640px, 94vw); max-height: 92vh; overflow-y: auto; border-radius: 20px; padding: 22px 24px 24px; }
+  #chapModal header { display: flex; align-items: center; justify-content: space-between; } #chapModal h2 { margin: 0; font-size: 20px; }
+  #chapModal .hint { margin: 6px 0 10px; color: var(--dim); font-size: 13px; line-height: 1.45; }
+  .chapRow { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-top: 8px; border-radius: 14px; background: rgba(255,236,200,.05); border: 1px solid var(--line); }
+  .chapRow.cur { border-color: rgba(240,181,90,.7); } .chapRow .ci { font-size: 26px; } .chapRow .cb { flex: 1; min-width: 0; }
+  .chapRow .ct { font-weight: 600; font-size: 14.5px; } .chapRow .cs { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .chapRow button { margin: 0; padding: 9px 12px; border-radius: 10px; font-weight: 600; font-size: 13px; background: rgba(255,220,160,.12); color: var(--txt); white-space: nowrap; }
+  .chapRow button.danger { background: rgba(220,80,60,.85); color: #fff; }
+  #menu #chapBtn { width: 100%; margin-top: 8px; padding: 9px; background: rgba(240,181,90,.16); font-weight: 600; }`; document.head.appendChild(st); })();
+function chapInfo(ch) {
+  let d = null; try { d = JSON.parse(lsGet(SK(CH_SAVE(ch))) || "null"); } catch (e) {}
+  if (!d) return L("Noch nicht begonnen", "Not started yet");
+  const dd = (d.simTime || 0) / DAY_LEN + 0.25, sd = dd / SEASON_DAYS, seas = (SLOT_SEAS[ch] || SLOT_SEAS.wiese)[Math.floor(sd) % 4];
+  const army = d.flags && d.flags.army, n = ch === "schwarm" ? (army ? Math.round(army.pop) : 0) : (d.workers || []).length;
+  return L(`Jahr ${Math.floor(sd / 4) + 1} · ${seas} · 🐜 ${fmtN(n)}`, `Year ${Math.floor(sd / 4) + 1} · ${trStr(seas)} · 🐜 ${fmtN(n)}`);
+}
+function restartChapter(ch) {
+  if (ch !== CHAPTER && started && !noSave) { save(); writeSlotMeta(true); }          // das laufende Kapitel vorher sichern
+  noSave = true; lsSet(SK(CH_SAVE(ch)), null); lsSet(SK("ameisenKapitel"), ch);
+  slotGo(SLOT, ch);
+}
+const chapModal = document.createElement("div"); chapModal.id = "chapModal";
+chapModal.innerHTML = `<div class="box glass"><header><h2></h2><button class="ico" title="Schließen">✕</button></header><p class="hint"></p><div class="chapList"></div></div>`;
+document.body.appendChild(chapModal);
+let chapSpeed = 1;
+function renderChaps() {
+  chapModal.querySelector("h2").textContent = L("📖 Kapitel neu beginnen", "📖 Restart a chapter");
+  chapModal.querySelector(".hint").textContent = L("Starte ein einzelnes Kapitel noch einmal von vorn. Die anderen Kapitel, alles, was im Buch schon freigeschaltet ist, und deine anderen Spielstände bleiben erhalten.", "Start a single chapter over from the beginning. The other chapters, everything already unlocked in the book and your other saves are kept.");
+  const list = chapModal.querySelector(".chapList"); list.innerHTML = "";
+  for (const ch of CH_ORDER) if (book.chapters.includes(ch)) {
+    const row = document.createElement("div"), cur = ch === CHAPTER; row.className = "chapRow" + (cur ? " cur" : "");
+    const draw = () => { row.innerHTML = `<div class="cb"><div class="ct"></div><div class="cs"></div></div>`;
+      row.querySelector(".ct").textContent = CH_TITLE[ch] + (cur ? L(" · läuft gerade", " · playing now") : ""); row.querySelector(".cs").textContent = chapInfo(ch);
+      const has = !!lsGet(SK(CH_SAVE(ch))), b = document.createElement("button"); b.textContent = has ? L("↺ Neu beginnen", "↺ Restart") : L("▶ Starten", "▶ Start"); b.onclick = () => { try { sfx.ui(); } catch (e) {} if (has) ask(); else restartChapter(ch); }; row.appendChild(b); };
+    const ask = () => { row.innerHTML = `<div class="cb"><div class="ct"></div><div class="cs"></div></div>`;
+      row.querySelector(".ct").textContent = L(`${CH_TITLE[ch]} wirklich von vorn beginnen?`, `Really start ${trStr(CH_TITLE[ch])} over?`);
+      row.querySelector(".cs").textContent = L("Nur dieses Kapitel wird gelöscht – der Fortschritt darin geht verloren.", "Only this chapter is deleted – your progress in it will be lost.");
+      const no = document.createElement("button"); no.textContent = L("Abbrechen", "Cancel"); no.onclick = draw;
+      const ok = document.createElement("button"); ok.className = "danger"; ok.textContent = L("↺ Neu beginnen", "↺ Restart"); ok.onclick = () => restartChapter(ch);
+      row.append(no, ok); };
+    draw(); list.appendChild(row);
+  }
+}
+function openChaps() { if (!started) return; chapSpeed = speed; setSpeed(0); save(); renderChaps(); chapModal.classList.add("on"); $("menu").style.display = "none"; }
+function closeChaps() { chapModal.classList.remove("on"); setSpeed(chapSpeed || 1); }
+chapModal.querySelector("header button").onclick = closeChaps;
+chapModal.onclick = e => { if (e.target === chapModal) closeChaps(); };
+addEventListener("keydown", e => { if (e.key === "Escape" && chapModal.classList.contains("on")) closeChaps(); });
+{ const b = document.createElement("button"); b.id = "chapBtn"; b.textContent = L("📖 Kapitel neu beginnen", "📖 Restart a chapter"); b.onclick = openChaps; $("resetBtn").before(b); }
+
 // nach einem Wechsel des Spielstands direkt weiterspielen; Ton startet mit dem ersten Klick
 { let auto = false; try { auto = sessionStorage.getItem("ameisenAutoStart") === "1"; sessionStorage.removeItem("ameisenAutoStart"); } catch (e) {}
   if (auto) setTimeout(() => { if (!started && $("startBtn")) $("startBtn").onclick(); }, 50);
@@ -16082,6 +16141,8 @@ requestAnimationFrame(frame);
   window.__back=function(){
     try{if(film){const b=$$('filmSkip');if(b){b.click();return true;}}}catch(e){}
     const sm=$$('slotsModal');if(sm&&sm.classList.contains('on')){const x=[...sm.querySelectorAll('button')].find(b=>/✕|×/.test(b.textContent));if(x){x.click();return true;}}
+    const cm=$$('chapModal');if(cm&&cm.classList.contains('on')){try{closeChaps();}catch(e){cm.classList.remove('on');}return true;}
+    const at=$$('axTgt');if(at){at.parentNode.removeChild(at);return true;}
     const db=$$('diaryBox');if(vis(db)){db.style.display='none';return true;}
     try{if($$('shopPanel').classList.contains('open')){toggleShop(false);return true;}}catch(e){}
     const mn=$$('menu');if(mn&&mn.classList.contains('open')){mn.classList.remove('open');const b=$$('menuBtn');if(b)b.classList.remove('on');return true;}
