@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#120c07"><meta name="format-detection" content="telephone=no">
-<script id="apkUpd0">(function(){var OWN=118;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
+<script id="apkUpd0">(function(){var OWN=119;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
 try{var v=R.ver();if(v>OWN){var n=+(localStorage.getItem('at_ub')||0);if(n>=3){R.clear();localStorage.setItem('at_ub','0');}
 else{localStorage.setItem('at_ub',String(n+1));R.boot();window.stop();}}else if(v&&v<OWN)R.clear();}catch(e){}})();</script>
 <title>Ameisen-Simulator</title>
@@ -231,7 +231,7 @@ const WALD = CHAPTER === "wald", ARMY = CHAPTER === "schwarm", REGEN = CHAPTER =
 // =====================================================================
 //  Ameisen-Tycoon – 2,5D-Querschnitt durch den Ameisenbau
 // =====================================================================
-const VERSION = "v1.18";
+const VERSION = "v1.19";
 const UPDATES = [
   ["v0.1", "Prototyp: eine Ameise sucht Futter an der Oberfläche."],
   ["v0.2", "Blick in den Bau: Königin, Eier, Larven, Puppen und Arbeiterinnen. Musik und Höhlen-Geräusche."],
@@ -352,6 +352,7 @@ const UPDATES = [
   ["v1.16", "Kapitel 4 zum Mitmachen: 👆 Fliehende Grillen, Schaben und Spinnen vor der Schwarmfront antippen – dann schnappen die Soldatinnen sie (sonst holt sie ein Ameisenvogel). 🎯 Auf dem Waldboden liegen Ziele – Termitenhügel, fremde Ameisennester und Wespennester; antippen, Beute und Verluste abwägen und zum Ziel des nächsten Raubzugs machen. 🌙 Jeden Abend der Wanderphase wählst du den Biwakplatz: gleich nebenan (ungeschützt bei Regen), zwischen Brettwurzeln oder im hohlen Baumstamm weit im frischen Jagdgebiet (langer Weg). 🌀 Läuft ein Trupp in der Ameisenmühle im Kreis, ziehst du mit dem Finger eine neue Duftspur zum Biwak und rettest ihn. 👑 Und Kapitel 4 hat ein Ziel: Ab 250.000 Arbeiterinnen teilt sich das Volk – mit eigenem Film."],
   ["v1.17", "Kapitel 4 erklärt sich jetzt selbst: Beim ersten Start zeigt eine kurze Anleitung, wie du dein Wanderameisen-Volk lenkst – keine Eier legen, Raubzug-Richtung wählen, Beute wird zu Nachwuchs, Stand- und Wanderphase, Mitmachen und das große Ziel. Über den neuen ❓-Knopf neben dem Raubzug-Knopf lässt sie sich jederzeit wieder öffnen; solange sie offen ist, pausiert das Spiel."],
   ["v1.18", "Jedes Kapitel lässt sich jetzt einzeln neu beginnen: Im Menü öffnet „📖 Kapitel neu beginnen“ eine Liste aller freigeschalteten Kapitel mit ihrem Stand. Ein Kapitel startet von vorn, während die anderen Kapitel, das Buch und die übrigen Spielstände erhalten bleiben. „↺ Diesen Spielstand neu beginnen“ setzt weiterhin alles zurück."],
+  ["v1.19", "Kapitel 4: Die Ameisen sammeln ihre Beute jetzt ganz von selbst – jeden Morgen jagen sie in der Richtung mit der meisten Beute, ohne dass du etwas bestimmen musst. Antippen des Raubzug-Knopfs ändert die Richtung nur für den nächsten Raubzug (✋). Außerdem bringen die Raubzüge mehr Beute heim und die Larven fressen weniger davon, sodass genug für die Anpassungen im Ausbau-Menü übrig bleibt."],
 ];
 const SAVE_KEY = SK("ameisen-tycoon-save-v4" + (WALD ? "-wald" : ARMY ? "-schwarm" : REGEN ? "-regen" : ""));
 
@@ -13398,7 +13399,7 @@ function raidTick(dt) {
   const prevFront = RAID.front; RAID.front = RAID.len * (out < 1 ? ease(out) : 1 - ease(back) * 0.999) * (raining ? 0.9 : 1);
   const fu = s.u + RAID.dir * RAID.front;
   if (RAID.front > prevFront) { const ci = clamp(Math.floor((fu - WX0) / CELL_W), 0, ARMY_CELLS - 1), d = s.cells[ci];   // die Front frisst die Gegend leer
-    const take = d * dt * 0.72, got = take * 26 * Math.pow(s.pop / 60000, 0.85) * armyMul();
+    const take = d * dt * 0.72, got = take * 36 * Math.pow(s.pop / 60000, 0.85) * armyMul();   // v1.19: mehr Beute
     s.cells[ci] = Math.max(0, d - take * 0.9); RAID.acc = (RAID.acc || 0) + got;
     while (RAID.acc >= 2.5) { const p = pick(PREY.filter(o => !o.need || unlocked[o.need])); RAID.acc -= p.v; RAID.carriers.push({ p, u: fu, off: rnd(-0.06, 0.06) }); }
     if (Math.random() < dt * 3) RAID.flee.push({ u: fu + RAID.dir * rnd(10, 60), v: rnd(0.1, 0.32), vy: 0, h: 0, t: 0, kind: pick(["cricket", "cricket", "roach", "spider"]) }); }
@@ -13497,8 +13498,8 @@ function armyUpdate(dt) {
   colony.cold = false; const wx = weatherInfo(); colony.rain = wx.rain > 0.3; const di = dayInfo(); colony.night = di.light < 0.2;
   armyDayChange(Math.floor(simTime / DAY_LEN + 0.25));
   raidTick(dt); migrationTick(dt);
-  const need = (s.pop * 0.00022 + s.larvae * 0.0032) * dt / DAY_LEN; s.sat = (s.sat ?? 1) + ((colony.food > need * 4 ? 1 : 0) - (s.sat ?? 1)) * Math.min(1, dt / DAY_LEN);                    // Larven fressen unglaublich viel
-  if (colony.food >= need) colony.food -= need; else { const miss = need - colony.food; colony.food = 0; const lost = Math.min(s.larvae, miss / 0.0032 * 0.25); s.larvae -= lost;
+  const need = (s.pop * 0.00022 + s.larvae * 0.0022) * dt / DAY_LEN; s.sat = (s.sat ?? 1) + ((colony.food > need * 4 ? 1 : 0) - (s.sat ?? 1)) * Math.min(1, dt / DAY_LEN);                    // Larven fressen unglaublich viel
+  if (colony.food >= need) colony.food -= need; else { const miss = need - colony.food; colony.food = 0; const lost = Math.min(s.larvae, miss / 0.0022 * 0.25); s.larvae -= lost;
     if (lost > 0 && !A.hungerT) { A.hungerT = 1; toast("🩸 Hunger im Biwak: Es gibt zu wenig Beute – die Arbeiterinnen opfern einen Teil der Larven, um die anderen durchzubringen."); } }
   if (A.hungerT && colony.food > 40) A.hungerT = 0;
   s.pop -= s.pop * 0.006 * dt / DAY_LEN;                                                        // Alter und Unfälle
@@ -13564,7 +13565,7 @@ function armyTip() {
   if (RAID.on) return L(`⚔️ Der Raubzug läuft – bisher ${fmtN(RAID.gain || 0)} Beute. Die Beute füttert die Brut: In ${hi.days} ${hi.days === 1 ? "Tag" : "Tagen"} schlüpfen etwa ${fmtN(hi.n)} neue Arbeiterinnen.`, `⚔️ The raid is on – ${fmtN(RAID.gain || 0)} prey so far. The prey feeds the brood: in ${hi.days} ${hi.days === 1 ? "day" : "days"} about ${fmtN(hi.n)} new workers will hatch.`);
   const ci = clamp(Math.floor((s.u - WX0) / CELL_W), 0, ARMY_CELLS - 1), reach = Math.max(2, Math.ceil(raidLen() / CELL_W));
   let sum = 0, n = 0; for (let i = 1; i <= reach; i++) { const j = ci + i * s.raidDir; if (j < 0 || j >= ARMY_CELLS) break; sum += s.cells[j]; n++; }
-  if ((A.hungerT || n === 0 || sum / n < 0.35) && preyAhead(-s.raidDir) > preyAhead(s.raidDir) + 0.1) return L("🧭 In dieser Richtung gibt es kaum noch Beute. Tippe unten auf den Raubzug-Knopf und wechsle die Richtung – dort hat sich die Gegend erholt.", "🧭 There's hardly any prey left in this direction. Tap the raid button below to switch direction – the forest floor there has recovered.");
+  if (s.manual && (A.hungerT || n === 0 || sum / n < 0.35) && preyAhead(-s.raidDir) > preyAhead(s.raidDir) + 0.1) return L("🧭 In dieser Richtung gibt es kaum noch Beute. Tippe unten auf den Raubzug-Knopf und wechsle die Richtung – dort hat sich die Gegend erholt.", "🧭 There's hardly any prey left in this direction. Tap the raid button below to switch direction – the forest floor there has recovered.");
   const dCreek = (armyCreekU() - s.u) * s.raidDir;
   if (!unlocked.livebridge && dCreek > 0 && dCreek < raidLen() && colony.food < 380 && preyAhead(s.raidDir) < 0.35) return L("🌊 Der Bach stoppt die Schwarmfront. Mit der Anpassung „Lebende Brücken“ kommt dein Volk hinüber – oder wechsle die Richtung.", "🌊 The creek stops the swarm front. With the adaptation “Living bridges” your colony can cross – or switch direction.");
   const next = UNLOCKS.find(u => !unlocked[u.id] && u.req());
@@ -13584,8 +13585,8 @@ function hatchInfo() { const s = armyState(), k = unlocked.bivouac ? 0.97 : 0.9;
   return s.phase === "stat" ? { days: Math.max(1, ARMY_STAT - s.pday + 1), n: s.pupae * k } : { days: Math.max(1, ARMY_NOM - s.pday + 1) + ARMY_STAT, n: s.larvae * k }; }
 function updateRaidBtn() { const s = armyState(), p = preyAhead(s.raidDir), lv = p > 0.55 ? 3 : p > 0.3 ? 2 : 1;
   const de = ["", "kaum Beute", "etwas Beute", "viel Beute"][lv], en = ["", "little prey", "some prey", "lots of prey"][lv], ic = "🦗".repeat(lv);
-  const txt = s.raidDir > 0 ? L(`⚔️ Raubzug: rechts → · ${ic} ${de}`, `⚔️ Raid: right → · ${ic} ${en}`) : L(`← Raubzug: links ⚔️ · ${ic} ${de}`, `← Raid: left ⚔️ · ${ic} ${en}`);
-  if ($("eggBtn").textContent !== txt) $("eggBtn").textContent = txt; $("eggBtn").title = "Richtung des nächsten Raubzugs und der Wanderung. Wanderameisen leeren die Gegend – zieh dorthin, wo noch Beute ist."; }
+  const txt = (s.raidDir > 0 ? L(`⚔️ Raubzug: rechts → · ${ic} ${de}`, `⚔️ Raid: right → · ${ic} ${en}`) : L(`← Raubzug: links ⚔️ · ${ic} ${de}`, `← Raid: left ⚔️ · ${ic} ${en}`)) + (s.manual ? " ✋" : "");
+  if ($("eggBtn").textContent !== txt) $("eggBtn").textContent = txt; $("eggBtn").title = L("Die Ameisen jagen von selbst dort, wo die meiste Beute lebt. Tippen ändert die Richtung für den nächsten Raubzug (✋).", "The ants hunt on their own where most prey lives. Tap to change the direction for the next raid (✋)."); }
 // =====================================================================
 //  Kapitel 4, Etappe 2: Mitläufer der Front und große Überfälle
 // =====================================================================
@@ -13873,6 +13874,7 @@ function openTargetPanel(g) {
     if ($("eggBtn").textContent !== txt) $("eggBtn").textContent = txt; }; }
 { const _rt4 = raidTick; raidTick = function (dt) {
     const was = RAID.on, s = armyState(); _rt4(dt);
+    if (was && !RAID.on && s.manual) { s.manual = false; updateRaidBtn(); }                                  // nach dem Raubzug wählen die Ameisen wieder selbst
     if (!was && RAID.on) { RAID.tgtEv = false; RAID.tgtFired = false; AX.nextCatch = 1.2;
       const g = armyTargets().find(o => o.id === s.tgt); if (g && !tgtReach(g).blocked) { const d = (g.u - s.u) * RAID.dir; if (d > 0 && d <= RAID.len + 5) RAID.tgtEv = true; } }
     if (RAID.on && RAID.tgtEv && !RAID.tgtFired) { const g = armyTargets().find(o => o.id === s.tgt);
@@ -13950,6 +13952,8 @@ function drawCampProps(x, y, R, B, kind) {
     if (s.site === "open" && colony.rain && !MIG.on && s.rainDay !== day) { s.rainDay = day; const loss = Math.round(s.pop * 0.015); s.pop -= loss; s.lost += loss;
       toast(L(`🌧️ Regen auf dem offenen Waldboden! Das Wasser spült ${fmtN(loss)} Ameisen aus dem ungeschützten Biwak.`, `🌧️ Rain on the open forest floor! The water washes ${fmtN(loss)} ants out of the unprotected bivouac.`)); }
     targetTick();
+    if (!RAID.on && !MIG.on && !AX.site && !s.tgt && !s.manual) { const r = preyAhead(1), l = preyAhead(-1), best = r >= l ? 1 : -1;   // v1.19: die Ameisen ziehen von selbst dorthin, wo die meiste Beute lebt
+      if (best !== s.raidDir && Math.abs(r - l) > 0.05) { s.raidDir = best; updateRaidBtn(); } }
     if (s.pop >= ARMY_SPLIT && !s.splitHint) { s.splitHint = 1; toast(L(`👑 Dein Volk hat ${fmtN(ARMY_SPLIT)} Arbeiterinnen! Jetzt kann es sich teilen – öffne das Ausbau-Menü: „Kolonie teilen“.`, `👑 Your colony has ${fmtN(ARMY_SPLIT)} workers! Now it can split – open the upgrade menu: “Split the colony”.`)); updateShop(); }
   }; }
 
@@ -14065,7 +14069,9 @@ function endSplitFilm() {
     if (AX.rescue && (AX.rescue.t += rdt) > 9) AX.rescue = null; }; }
 { const sa = setupArmy; setupArmy = function () { sa();
     const s = armyState(); if (!s.targets || !s.targets.length) { s.targets = []; for (let i = 0; i < 3; i++) spawnTarget(); s.tgtDay = armyDay(); }
-    $("eggBtn").onclick = () => { const s2 = armyState(); if (s2.tgt) s2.tgt = null; else s2.raidDir *= -1; updateRaidBtn(); try { sfx.ui(); } catch (e) {} }; updateRaidBtn(); }; }
+    $("eggBtn").onclick = () => { const s2 = armyState(); if (s2.tgt) s2.tgt = null; else { s2.raidDir *= -1; const auto = preyAhead(1) >= preyAhead(-1) ? 1 : -1; s2.manual = s2.raidDir !== auto;
+        if (s2.manual && !colony.flags.manualHint) { colony.flags.manualHint = 1; toast(L("✋ Du hast die Richtung selbst gewählt. Nach dem nächsten Raubzug entscheiden die Ameisen wieder allein, wo sie jagen.", "✋ You picked the direction yourself. After the next raid the ants decide on their own again where to hunt.")); } }
+      updateRaidBtn(); try { sfx.ui(); } catch (e) {} }; updateRaidBtn(); }; }
 
 // =====================================================================
 //  v0.82 Schaukel: Brett und Seile schwingen als Einheit, das Mädchen sitzt darauf, greift die Seile und holt richtig Schwung
@@ -15889,7 +15895,7 @@ function armyGuide(open) {
   if (o) return; armyGuide.sp = speed || 1; setSpeed(0);
   const st = [
     ["👑", L("<b>Hier legst du keine Eier.</b> Die Königin legt von selbst – in der Standphase Zehntausende auf einmal. Dein Volk wächst durch <b>Beute</b>.", "<b>You don't lay eggs here.</b> The queen lays them on her own – tens of thousands at once in the stationary phase. Your colony grows through <b>prey</b>.")],
-    ["⚔️", L("<b>Jeden Tag zieht ein Raubzug los.</b> Mit dem orangen Knopf unten wählst du die Richtung – links oder rechts. Die 🦗 auf dem Knopf zeigen, wie viel Beute dort noch lebt. Leergejagte Gegenden erholen sich erst nach Tagen.", "<b>A raid sets out every day.</b> The orange button below picks the direction – left or right. The 🦗 on the button show how much prey is still there. Areas you have emptied take days to recover.")],
+    ["⚔️", L("<b>Jeden Morgen zieht ein Raubzug los – ganz von selbst.</b> Die Ameisen jagen dort, wo die meiste Beute lebt, und bringen sie heim. Die 🦗 auf dem orangen Knopf zeigen, wie viel Beute dort lebt. Willst du selbst bestimmen, tippst du ihn an (✋) – nach dem Raubzug entscheiden die Ameisen wieder allein.", "<b>Every morning a raid sets out – all by itself.</b> The ants hunt where most prey lives and bring it home. The 🦗 on the orange button show how much prey is there. If you want to decide yourself, tap it (✋) – after the raid the ants decide on their own again.")],
     ["🐛", L("<b>Beute wird zu Nachwuchs:</b> Sie füttert die Larven, aus ihnen schlüpfen neue Arbeiterinnen. Gesammelte Beute 🦗 gibst du im Ausbau-Menü für <b>Anpassungen</b> aus.", "<b>Prey becomes offspring:</b> it feeds the larvae, and new workers hatch from them. You spend collected prey 🦗 on <b>adaptations</b> in the upgrade menu.")],
     ["🔁", L(`<b>Der Rhythmus:</b> 🏕️ <b>Standphase</b> (${ARMY_STAT} Tage) – das Biwak bleibt, Eier und Puppen reifen. 🧭 <b>Wanderphase</b> (${ARMY_NOM} Tage) – jede Nacht zieht das Volk um, und du wählst den neuen Biwakplatz. Oben bei der Uhr siehst du, welche Phase gerade läuft.`, `<b>The rhythm:</b> 🏕️ <b>stationary phase</b> (${ARMY_STAT} days) – the bivouac stays put while eggs and pupae mature. 🧭 <b>Nomadic phase</b> (${ARMY_NOM} days) – the colony moves every night and you choose the new bivouac site. The clock at the top shows the current phase.`)],
     ["👆", L("<b>Mitmachen:</b> Fliehende Tiere vor der Schwarmfront antippen. Termitenhügel, fremde Ameisen- und Wespennester als 🎯 Ziel antippen. Läuft ein Trupp im Kreis, ziehst du mit dem Finger eine Spur zum Biwak.", "<b>Join in:</b> tap fleeing animals ahead of the swarm front. Tap termite mounds, rival ant nests and wasp nests to make them a 🎯 target. If a squad runs in circles, drag a trail to the bivouac with your finger.")],
