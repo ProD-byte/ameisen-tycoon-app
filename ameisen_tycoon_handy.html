@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#120c07"><meta name="format-detection" content="telephone=no">
-<script id="apkUpd0">(function(){var OWN=119;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
+<script id="apkUpd0">(function(){var OWN=120;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
 try{var v=R.ver();if(v>OWN){var n=+(localStorage.getItem('at_ub')||0);if(n>=3){R.clear();localStorage.setItem('at_ub','0');}
 else{localStorage.setItem('at_ub',String(n+1));R.boot();window.stop();}}else if(v&&v<OWN)R.clear();}catch(e){}})();</script>
 <title>Ameisen-Simulator</title>
@@ -231,7 +231,7 @@ const WALD = CHAPTER === "wald", ARMY = CHAPTER === "schwarm", REGEN = CHAPTER =
 // =====================================================================
 //  Ameisen-Tycoon – 2,5D-Querschnitt durch den Ameisenbau
 // =====================================================================
-const VERSION = "v1.19";
+const VERSION = "v1.20";
 const UPDATES = [
   ["v0.1", "Prototyp: eine Ameise sucht Futter an der Oberfläche."],
   ["v0.2", "Blick in den Bau: Königin, Eier, Larven, Puppen und Arbeiterinnen. Musik und Höhlen-Geräusche."],
@@ -353,8 +353,9 @@ const UPDATES = [
   ["v1.17", "Kapitel 4 erklärt sich jetzt selbst: Beim ersten Start zeigt eine kurze Anleitung, wie du dein Wanderameisen-Volk lenkst – keine Eier legen, Raubzug-Richtung wählen, Beute wird zu Nachwuchs, Stand- und Wanderphase, Mitmachen und das große Ziel. Über den neuen ❓-Knopf neben dem Raubzug-Knopf lässt sie sich jederzeit wieder öffnen; solange sie offen ist, pausiert das Spiel."],
   ["v1.18", "Jedes Kapitel lässt sich jetzt einzeln neu beginnen: Im Menü öffnet „📖 Kapitel neu beginnen“ eine Liste aller freigeschalteten Kapitel mit ihrem Stand. Ein Kapitel startet von vorn, während die anderen Kapitel, das Buch und die übrigen Spielstände erhalten bleiben. „↺ Diesen Spielstand neu beginnen“ setzt weiterhin alles zurück."],
   ["v1.19", "Kapitel 4: Die Ameisen sammeln ihre Beute jetzt ganz von selbst – jeden Morgen jagen sie in der Richtung mit der meisten Beute, ohne dass du etwas bestimmen musst. Antippen des Raubzug-Knopfs ändert die Richtung nur für den nächsten Raubzug (✋). Außerdem bringen die Raubzüge mehr Beute heim und die Larven fressen weniger davon, sodass genug für die Anpassungen im Ausbau-Menü übrig bleibt."],
+  ["v1.20", "Kapitel 4 spielt sich jetzt wie die anderen drei Kapitel: Die Königin legt Eier, die Arbeiterinnen graben die Kammern des Biwaks, Jägerinnen holen Grillen, Spinnen und Käfer von selbst ins Beutelager, und im Ausbau-Menü machst du dein Volk stärker – mit Wanderameisen-Anpassungen wie Hakenkiefer, Lastträgerinnen oder Soldatinnen mit Sichelkiefern. Dazu kommt mehr Action: Jeden Morgen zieht ein großer Raubzug mit Schwarmfront und Ameisenvögeln los, fliehende Tiere antippen bringt Extra-Beute, und manchmal plündert die Front ein Wespen- oder Ameisennest. Ab und zu zieht das Volk nachts von selbst in ein frisches Jagdgebiet weiter. Ist alles ausgebaut, teilt sich das Volk im großen Finale. Kapitel 4 beginnt dafür neu."],
 ];
-const SAVE_KEY = SK("ameisen-tycoon-save-v4" + (WALD ? "-wald" : ARMY ? "-schwarm" : REGEN ? "-regen" : ""));
+const SAVE_KEY = SK("ameisen-tycoon-save-v4" + (WALD ? "-wald" : ARMY ? "-schwarm2" : REGEN ? "-regen" : ""));
 
 // ---------- Hilfen ----------
 function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
@@ -1861,7 +1862,7 @@ function collectAt(a, s, here) {
     a._hole = false;
     if (gone()) { a.crop = 0; return; }
     const liquid = s.kind === "berry" || s.kind === "aphids" || s.kind === "lemo" || s.kind === "grape" || s.kind === "lycaenid";
-    const amt = Math.min(s.amount, s.kind === "insect" ? 3 : Math.round(carryAmt() * (a.size || 1)));
+    const amt = Math.min(s.amount, s.kind === "insect" && !ARMY ? 3 : Math.round(carryAmt() * (a.size || 1)));
     if (s.amount !== Infinity) { s.amount -= amt; if (s.amount <= 0) removeSource(s); }
     if (liquid) { a.crop = amt; a.cropMax = amt; } else a.carry = { kind: "food", amt, col: s.col, shape: s.kind };
     a.fromSrc = s;
@@ -7097,7 +7098,8 @@ function updateHud() {
   updateShop();
 }
 function tipText() {
-  if (ARMY) return armyTip();                                                                   // v1.14: Kapitel 4 hat eigene Tipps (vorher: „Lass die Königin ihr erstes Ei legen!“)
+  if (ARMY && RAID.on && AX.catch.length) return L("👆 Schnell! Tippe die fliehenden Tiere vor der Schwarmfront an – das bringt Extra-Beute.", "👆 Quick! Tap the fleeing animals ahead of the swarm front – it brings extra prey.");
+  if (ARMY && AUTOMIG.on) return L("🌙 Das Volk zieht weiter in ein frisches Jagdgebiet – das geschieht ganz von selbst.", "🌙 The colony moves on to fresh hunting grounds – all by itself.");                                                                   // v1.14: Kapitel 4 hat eigene Tipps (vorher: „Lass die Königin ihr erstes Ei legen!“)
   const ws = workers().length;
   if (colony.cold) return colony.food < winterNeed() ? "❄️ Der Vorrat wird knapp! Jagende Ameisen bringen Springschwänze – oder spule vor und hoffe auf den Frühling." : "❄️ Winterruhe: Die Kolonie zehrt von ihren Vorräten. Mit „Winterruhe vorspulen“ geht es schnell zum Frühling.";
   const ex = activeExpansion(); if (ex) return `📐 Die Ameisen vergrößern gerade die ${CH_NAME[ex.expandOf.id]} (${Math.floor(ex.done / ex.stamps.length * 100)} %).`;
@@ -8221,7 +8223,7 @@ function nestComplete() {
 let flightCard = null;
 let flightTodo = null;
 function updateFlightTodo() {                                                                    // was noch fehlt bis zum großen Hochzeitsflug
-  const show = ((CHAPTER === "wiese" && !book.chapters.includes("wald")) || (CHAPTER === "wald" && !book.chapters.includes("regen")) || (CHAPTER === "regen" && !book.chapters.includes("schwarm"))) && !nestComplete() && nestProgress() >= 0.5;
+  const show = ((CHAPTER === "wiese" && !book.chapters.includes("wald")) || (CHAPTER === "wald" && !book.chapters.includes("regen")) || (CHAPTER === "regen" && !book.chapters.includes("schwarm")) || (ARMY && !colony.flags.split4)) && !nestComplete() && nestProgress() >= 0.5;
   if (!show) { if (flightTodo) { flightTodo.remove(); flightTodo = null; } return; }
   if (!flightTodo) { flightTodo = document.createElement("div"); flightTodo.className = "card flightCard"; $("cards").prepend(flightTodo); }
   const items = [];
@@ -8229,12 +8231,12 @@ function updateFlightTodo() {                                                   
     if (!unlocked[u.id]) items.push(`${u.icon} ${u.name} – ${u.req && !u.req() ? "🔒 " + u.reqTxt : "noch kaufen"}`);
     else if (u.project && projects[u.project] && !isDone(u.project)) { const p = projects[u.project]; items.push(`${u.icon} ${u.name} – ⛏️ wird gegraben (${Math.floor(p.done / p.stamps.length * 100)} %)`); } }
   for (const p of Object.values(projects)) if (!p.expandOf && p.done < p.stamps.length && !UNLOCKS.some(u => u.project === p.id)) { const ow = UNLOCKS.filter(u => p.id.startsWith(u.id)).sort((x, y) => y.id.length - x.id.length)[0]; items.push(`${ow ? ow.icon + " " + ow.name : "⛏️ Gang"} – ⛏️ wird gegraben (${Math.floor(p.done / p.stamps.length * 100)} %)`); }
-  const pct = Math.floor(nestProgress() * 100), html = `<div class="ic">👑</div><div class="bd"><div class="t">Weg zum großen Hochzeitsflug · ${pct} %</div><div class="d">Wenn alles gekauft und fertig gegraben ist, kannst du hier den Hochzeitsflug starten – dann geht es weiter in Kapitel 2, den Wald. Es fehlt noch:</div><div class="d" style="margin-top:4px;line-height:1.45">${items.slice(0, 8).join("<br>")}${items.length > 8 ? `<br>… und ${items.length - 8} weitere` : ""}</div></div>`;
+  const pct = Math.floor(nestProgress() * 100), html = `<div class="ic">👑</div><div class="bd"><div class="t">Weg zum großen Hochzeitsflug · ${pct} %</div><div class="d">${ARMY ? L("Wenn alles gekauft und fertig gegraben ist, teilt sich hier dein Volk – das große Finale von Kapitel 4. Es fehlt noch:", "Once everything is bought and dug, your colony splits here – the grand finale of chapter 4. Still missing:") : "Wenn alles gekauft und fertig gegraben ist, kannst du hier den Hochzeitsflug starten – dann geht es weiter in Kapitel 2, den Wald. Es fehlt noch:"}</div><div class="d" style="margin-top:4px;line-height:1.45">${items.slice(0, 8).join("<br>")}${items.length > 8 ? `<br>… und ${items.length - 8} weitere` : ""}</div></div>`;
   if (flightTodo._h !== html) { flightTodo._h = html; flightTodo.innerHTML = html; }
 }
 function updateFlightCard() {
   updateFlightTodo();
-  const show = ((CHAPTER === "wiese" || CHAPTER === "wald") && nestComplete()) || (CHAPTER === "regen" && nestComplete() && (colony.flights || 0) > 0);
+  const show = ((CHAPTER === "wiese" || CHAPTER === "wald") && nestComplete()) || (CHAPTER === "regen" && nestComplete() && (colony.flights || 0) > 0) || (ARMY && nestComplete());
   if (!show) { if (flightCard) { flightCard.remove(); flightCard = null; } return; }
   const nextCh = WALD ? "regen" : CHAPTER === "regen" ? "schwarm" : "wald";
   if (!flightCard) {
@@ -8243,11 +8245,13 @@ function updateFlightCard() {
     flightCard.querySelector("button").onclick = () => WALD ? playRegenFlight() : CHAPTER === "regen" ? playRegenFlight(false, "schwarm") : playFlightFilm();
     if (CHAPTER === "regen") { flightCard.querySelector(".d").textContent = L("Nach dem Regen sind die jungen Blattschneider-Königinnen ausgeflogen – dein Volk hat es geschafft. Das Buch blättert weiter zu Kapitel 4: den Wanderameisen.", "After the rain the young leafcutter queens have flown out – your colony made it. The book turns to chapter 4: the army ants.");
       flightCard.querySelector("button").textContent = L("Weiter zu Kapitel 4", "On to chapter 4"); }
+    if (ARMY) { flightCard.querySelector(".t").textContent = L("Die Koloniespaltung", "The colony split"); flightCard.querySelector(".d").textContent = L("Dein Biwak ist fertig ausgebaut und das Volk riesig. Jetzt zieht es junge Königinnen auf und teilt sich – das große Finale von Kapitel 4.", "Your bivouac is fully built and the colony is huge. Now it raises young queens and splits – the grand finale of chapter 4.");
+      flightCard.querySelector("button").textContent = colony.flags.split4 ? L("Film noch einmal ansehen", "Watch the film again") : L("Kolonie teilen", "Split the colony"); flightCard.querySelector("button").onclick = () => playSplitFilm(!!colony.flags.split4); }
     if (WALD) flightCard.querySelector(".d").textContent = "Das Waldameisen-Nest ist fertig ausgebaut. Die Prinzessinnen schwärmen aus – und das Buch blättert weiter zu Kapitel 3: dem Regenwald.";
     $("cards").prepend(flightCard);
     if (!colony.flags.bigFlight) { colony.flags.bigFlight = 1; toast(CHAPTER === "regen" ? L("👑 Die Prinzessinnen sind ausgeflogen! Im Ausbau-Menü geht es jetzt weiter zu Kapitel 4: den Wanderameisen.", "👑 The princesses have flown! In the upgrade menu you can now go on to chapter 4: the army ants.") : "👑 Das Nest ist vollständig ausgebaut! Im Ausbau-Menü kannst du jetzt den großen Hochzeitsflug starten."); }
   }
-  if (book.chapters.includes(nextCh)) { flightCard.querySelector(".t").textContent = "Großer Hochzeitsflug (noch einmal ansehen)"; }
+  if (!ARMY && book.chapters.includes(nextCh)) { flightCard.querySelector(".t").textContent = "Großer Hochzeitsflug (noch einmal ansehen)"; }
 }
 // v1.13: Regenwald – sicherer Weg zu Kapitel 4: Sind die Geflügelten ausgewachsen, kann man sie per Knopf sofort ausfliegen lassen
 function readyAlates() { return ants.filter(a => a.kind === "alate" && !a.flying && a.callow < 0.3); }
@@ -8274,7 +8278,7 @@ function updateAlateCard() {
   alateCard.querySelector("button").onclick = startAlateFlight;
   $("cards").prepend(alateCard);
 }
-{ const us = updateShop; updateShop = () => { us(); updateFlightCard(); updateAlateCard(); if (alateCard) { const b = $("shopBadge"); b.textContent = (+b.textContent || 0) + 1; b.classList.add("has"); } const b = $("shopBadge"); if (flightCard && !book.chapters.includes(WALD ? "regen" : CHAPTER === "regen" ? "schwarm" : "wald")) { b.textContent = (+b.textContent || 0) + 1; b.classList.add("has"); } }; }
+{ const us = updateShop; updateShop = () => { us(); updateFlightCard(); updateAlateCard(); if (alateCard) { const b = $("shopBadge"); b.textContent = (+b.textContent || 0) + 1; b.classList.add("has"); } const b = $("shopBadge"); if (flightCard && (ARMY ? !colony.flags.split4 : !book.chapters.includes(WALD ? "regen" : CHAPTER === "regen" ? "schwarm" : "wald"))) { b.textContent = (+b.textContent || 0) + 1; b.classList.add("has"); } }; }
 
 // =====================================================================
 //  Filmszene: Hochzeitsflug → Waldrand → Waldameisen-Königin unter dem Stumpf
@@ -9986,7 +9990,7 @@ function playMilestone(kind, rewatch = false) {
   stopFollow(); diaryBox.style.display = "none";
   const M = MS[kind];
   film = { part: "ms", kind, t: 0, rewatch, simBefore: simTime, spBefore: speed, camBefore: { x: cam.x, y: cam.y, zoom: cam.zoom }, capIdx: -1, actors: [], wings: [] };
-  film.box = filmUI(); film.box.querySelector("#filmTitle").innerHTML = `<small>${REGEN ? "KAPITEL 3 · DER REGENWALD" : WALD ? "KAPITEL 2 · DER WALD" : "KAPITEL 1 · DIE WIESE"}</small><div>${M.title}</div>`;
+  film.box = filmUI(); film.box.querySelector("#filmTitle").innerHTML = `<small>${ARMY ? "KAPITEL 4 · DIE WANDERAMEISEN" : REGEN ? "KAPITEL 3 · DER REGENWALD" : WALD ? "KAPITEL 2 · DER WALD" : "KAPITEL 1 · DIE WIESE"}</small><div>${M.title}</div>`;
   if (kind === "winter" && seasonInfo().idx !== 3) {                                   // nachträglich ansehen: an einen Wintertag springen
     const yr = Math.floor((simTime / DAY_LEN + 0.25) / (4 * SEASON_DAYS)), d = yr * 4 * SEASON_DAYS + 3 * SEASON_DAYS + Math.floor(SEASON_DAYS * 0.6);
     simTime = (d + 11 / 24 - 0.25) * DAY_LEN; setSpeed(0);
@@ -11790,13 +11794,13 @@ if (WALD) {
 // =====================================================================
 const CASTE = { minim: { s: 0.5, name: "Gärtnerin (Minima)" }, minor: { s: 0.72, name: "kleine Arbeiterin (Minor)" }, media: { s: 1.0, name: "Schneiderin (Media)" }, major: { s: 1.75, name: "Soldatin (Major)" } };
 function rollCaste() { const r = Math.random(); return r < 0.22 ? "minim" : r < 0.5 ? "minor" : r < 0.93 ? "media" : "major"; }
-const ATTA_COL = [148, 66, 30], ATTA_DARK = [96, 40, 18];
+const ATTA_COL = [148, 66, 30], ATTA_DARK = [96, 40, 18], ECI_COL = [122, 62, 32];   // ECI_COL: Wanderameisen (Kapitel 4)
 // Ameise im Profil: Kopf nach +x, Füße bei y = 0, Körperlänge ~30 bei Größe 1
 function paintAtta(a, detail) {
   const caste = a.caste || "media", q = a.kind === "queen" || (a.kind === "alate" && a.sex === "f"), male = a.kind === "alate" && a.sex === "m";
   const hk = q ? 1.15 : caste === "major" ? 1.75 : caste === "minim" ? 1.15 : caste === "minor" ? 1.05 : 1;   // Soldatinnen: riesiger, herzförmiger Kopf
   const ph = a.phase || 0, walk = a.moving ? 1 : 0, dead = a.dead;
-  const col = dead ? [96, 84, 72] : a.sick ? mix(ATTA_COL, [150, 140, 120], Math.min(0.7, a.sick)) : male ? [70, 40, 26] : mix(ATTA_COL, [226, 180, 130], a.callow || 0);
+  const col = dead ? [96, 84, 72] : a.sick ? mix(ATTA_COL, [150, 140, 120], Math.min(0.7, a.sick)) : male ? [70, 40, 26] : mix(ARMY ? ECI_COL : ATTA_COL, [226, 180, 130], a.callow || 0);
   const dk = rgb(col, 0.62), md = rgb(col), lt = rgb(col, 1.35);
   const gx = q ? -14 : male ? -11 : -10, grx = q ? 11 : male ? 6.5 : 5.2, gry = q ? 7.5 : male ? 4.4 : 4.6;
   // Beine: drei Paare, ferne dunkler; im Gang abwechselnd (Dreifußgang)
@@ -11820,7 +11824,7 @@ function paintAtta(a, detail) {
   // Bruststück (Mesosoma) mit drei Dornenpaaren
   const mg = ctx.createLinearGradient(0, -15, 0, -8); mg.addColorStop(0, lt); mg.addColorStop(1, dk);
   ctx.fillStyle = mg; ctx.beginPath(); ctx.moveTo(-2, -9.5); ctx.quadraticCurveTo(-2.5, -13.5, 1, -13.8); ctx.quadraticCurveTo(4, -15.6, 7, -13); ctx.quadraticCurveTo(7.6, -10, 5.5, -9); ctx.closePath(); ctx.fill();
-  if (!male) { ctx.strokeStyle = dk; ctx.lineWidth = 0.9; ctx.beginPath(); for (const [sx, sy, ex, ey] of [[5.5, -14.2, 6.6, -17], [3, -14.8, 2.6, -17.6], [-0.8, -13.2, -2.6, -15.8]]) { ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); } ctx.stroke(); }
+  if (!male && !ARMY) { ctx.strokeStyle = dk; ctx.lineWidth = 0.9; ctx.beginPath(); for (const [sx, sy, ex, ey] of [[5.5, -14.2, 6.6, -17], [3, -14.8, 2.6, -17.6], [-0.8, -13.2, -2.6, -15.8]]) { ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); } ctx.stroke(); }
   if (q && a.kind === "queen") { ell(2.5, -14.6, 3.2, 1.3, 0, rgb(col, 1.1)); ell(3.2, -14.8, 1, 0.6, 0, "rgba(40,20,10,.8)"); }   // Flügelnarben
   // Kopf: herzförmig mit Hinterhauptsdornen, kräftige Kiefer, geknickte Fühler
   ctx.save(); ctx.translate(9.5, -12.2); ctx.scale(hk, hk);
@@ -11830,10 +11834,12 @@ function paintAtta(a, detail) {
   ctx.moveTo(2.5, -2.2); ctx.lineTo(5.5, -6.5 + an); ctx.lineTo(10, -4.8 + an * 1.4); ctx.stroke();
   const hg = ctx.createRadialGradient(-0.5, -2.2, 0.4, 0.5, -0.5, 5.6); hg.addColorStop(0, lt); hg.addColorStop(1, dk);
   ctx.fillStyle = hg; ctx.beginPath(); ctx.moveTo(-3.2, -1.5); ctx.quadraticCurveTo(-3.6, -4.8, -1, -4.6); ctx.quadraticCurveTo(0.6, -3.6, 1.8, -4.4); ctx.quadraticCurveTo(4.6, -3.6, 4.4, 0); ctx.quadraticCurveTo(3.4, 3.2, 0, 3); ctx.quadraticCurveTo(-3, 2.6, -3.2, -1.5); ctx.closePath(); ctx.fill();
-  if (!male) { ctx.strokeStyle = dk; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(-2.4, -4); ctx.lineTo(-3.6, -6); ctx.stroke(); }   // Hinterhauptsdorn
-  ell(1.6, -1.2, 0.8, 0.7, 0, "rgba(20,10,4,.9)");                                                           // kleines Auge
+  if (ARMY && caste === "major" && !q) { ctx.fillStyle = "rgba(204,150,84,.6)"; ctx.fill(); }                                  // Wanderameisen-Soldatin: heller Kopf
+  if (!male && !ARMY) { ctx.strokeStyle = dk; ctx.lineWidth = 0.7; ctx.beginPath(); ctx.moveTo(-2.4, -4); ctx.lineTo(-3.6, -6); ctx.stroke(); }   // Hinterhauptsdorn
+  if (!ARMY) ell(1.6, -1.2, 0.8, 0.7, 0, "rgba(20,10,4,.9)");                                   // Wanderameisen sind fast blind: kein Auge                                                           // kleines Auge
   ctx.fillStyle = rgb(col, 0.5); ctx.beginPath(); ctx.moveTo(3.6, 1); ctx.quadraticCurveTo(6.5 + dig * 2, 1.5, 6.8, 3.6 + dig * 2); ctx.lineTo(5.6, 3.2 + dig); ctx.quadraticCurveTo(4.8, 2.4, 3.2, 2.6); ctx.closePath(); ctx.fill();   // Kiefer
-  if (caste === "major" && !q) { ctx.strokeStyle = "rgba(255,220,180,.18)"; ctx.lineWidth = 0.4; ctx.beginPath(); ctx.moveTo(-1.5, -3.5); ctx.quadraticCurveTo(0.5, -1, 0.2, 2.2); ctx.stroke(); }   // Mittelfurche des Soldatenkopfes
+  if (ARMY && caste === "major" && !q) { ctx.strokeStyle = "#2a160a"; ctx.lineWidth = 0.95; ctx.beginPath(); ctx.moveTo(3.8, 1.6); ctx.bezierCurveTo(8.4, 2.6, 10.6, -1.6, 7.8, -4.8); ctx.stroke(); }   // lange Sichelkiefer
+  if (caste === "major" && !q && !ARMY) { ctx.strokeStyle = "rgba(255,220,180,.18)"; ctx.lineWidth = 0.4; ctx.beginPath(); ctx.moveTo(-1.5, -3.5); ctx.quadraticCurveTo(0.5, -1, 0.2, 2.2); ctx.stroke(); }   // Mittelfurche des Soldatenkopfes
   ctx.restore();
   // Flügel bei Geflügelten
   if (a.kind === "alate" && (detail || a.flying)) { const f = a.flying ? Math.sin(ph) : 0.15, wy = 0.3 + 0.7 * Math.abs(f); ctx.fillStyle = "rgba(225,215,190,.42)"; ctx.strokeStyle = "rgba(120,90,60,.5)"; ctx.lineWidth = 0.4;
@@ -12410,7 +12416,7 @@ function setupRegen() {
     if (typeof pushOldiesDyn === "function") {}
   };
   const aw = animWeather; animWeather = rdt => { aw(rdt); const dt = rdt * (speed || 0); rfAnimals(rdt); phoridTick(dt);
-    for (let i = sources.length - 1; i >= 0; i--) { const q = sources[i]; if ((q.kind === "insect" || q.kind === "seed" || q.kind === "crumb") && !q.carriers.length) sources.splice(i, 1); }   // Blattschneider sammeln keine Insekten oder Samen
+    for (let i = sources.length - 1; i >= 0; i--) { const q = sources[i]; if (!ARMY && (q.kind === "insect" || q.kind === "seed" || q.kind === "crumb") && !q.carriers.length) sources.splice(i, 1); }   // Blattschneider sammeln keine Insekten oder Samen
     if (colony.rain) colony.wasRainT = 1; else colony.wasRainT = Math.max(0, (colony.wasRainT || 0) - rdt / 40);
     for (const a of ants) if (a.carry && a.carry.shape === "leaf" && a.hitch == null) a.hitch = Math.random() < (unlocked.pavilion ? 0.75 : 0.18); else if (!a.carry) a.hitch = null; };
   regenUnlocks(); $("cards").innerHTML = ""; for (const k in cardEls) delete cardEls[k]; buildShop();
@@ -13162,7 +13168,7 @@ function pvCheck() {
 function playProgress(rewatch) {
   if (film || !PV) return; stopFollow(); diaryBox.style.display = "none";
   film = { part: "pv", t: 0, rewatch, simBefore: simTime, spBefore: speed || 1, camBefore: { x: cam.x, y: cam.y, zoom: cam.zoom }, capIdx: -1, actors: [], wings: [] };
-  film.box = filmUI(); film.box.querySelector("#filmTitle").innerHTML = `<small>${REGEN ? "KAPITEL 3 · DER REGENWALD" : WALD ? "KAPITEL 2 · DER WALD" : "KAPITEL 1 · DIE WIESE"}</small><div>${PV.title}</div>`;
+  film.box = filmUI(); film.box.querySelector("#filmTitle").innerHTML = `<small>${ARMY ? "KAPITEL 4 · DIE WANDERAMEISEN" : REGEN ? "KAPITEL 3 · DER REGENWALD" : WALD ? "KAPITEL 2 · DER WALD" : "KAPITEL 1 · DIE WIESE"}</small><div>${PV.title}</div>`;
   film.box.querySelector("#filmSkip").onclick = endProgress;
   if (rewatch) { const yr = Math.floor((simTime / DAY_LEN + 0.25) / (4 * SEASON_DAYS)), d0 = yr * 4 * SEASON_DAYS + (REGEN ? 3 : 1) * SEASON_DAYS, d = filmDry(d0); simTime = (d + 10.5 / 24 - 0.25) * DAY_LEN; setSpeed(0); }
   else { setSpeed(1); diaryAdd(PV.diary, true); }
@@ -13404,10 +13410,10 @@ function raidTick(dt) {
     while (RAID.acc >= 2.5) { const p = pick(PREY.filter(o => !o.need || unlocked[o.need])); RAID.acc -= p.v; RAID.carriers.push({ p, u: fu, off: rnd(-0.06, 0.06) }); }
     if (Math.random() < dt * 3) RAID.flee.push({ u: fu + RAID.dir * rnd(10, 60), v: rnd(0.1, 0.32), vy: 0, h: 0, t: 0, kind: pick(["cricket", "cricket", "roach", "spider"]) }); }
   for (const c of RAID.carriers) c.u -= RAID.dir * dt * 26;                                    // Beute wird zu zweit zum Biwak getragen
-  for (let i = RAID.carriers.length - 1; i >= 0; i--) { const c = RAID.carriers[i]; if ((c.u - s.u) * RAID.dir <= 0) { colony.food += c.p.v; s.caught += c.p.v; RAID.gain += c.p.v; RAID.carriers.splice(i, 1); } }
+  for (let i = RAID.carriers.length - 1; i >= 0; i--) { const c = RAID.carriers[i]; if ((c.u - s.u) * RAID.dir <= 0) { colony.food = Math.min(foodCap(), colony.food + c.p.v); s.caught += c.p.v; RAID.gain += c.p.v; RAID.carriers.splice(i, 1); } }
   for (let i = RAID.flee.length - 1; i >= 0; i--) { const f = RAID.flee[i]; f.t += dt; f.u += RAID.dir * dt * 40; f.h = Math.abs(Math.sin(f.t * 5)) * 14; if (f.t > 2.5) RAID.flee.splice(i, 1); }
-  if (back >= 1 && !RAID.carriers.length) { RAID.on = false; const loss = Math.round(s.pop * 0.004 * (unlocked.soldiers ? 0.7 : 1)); s.pop -= loss; s.lost += loss;
-    toast(`⚔️ Raubzug beendet: ${fmtN(RAID.gain)} Beute erlegt, ${fmtN(loss)} Arbeiterinnen sind im Kampf gefallen.`); }
+  if (back >= 1 && !RAID.carriers.length) { RAID.on = false;
+    toast(L(`⚔️ Der Raubzug ist zurück: ${fmtN(RAID.gain)} Beute erlegt und ins Lager getragen.`, `⚔️ The raid is back: ${fmtN(RAID.gain)} prey caught and carried to the store.`)); }
 }
 function drawRaid() {
   if (!RAID.on) return; const s = armyState(), v0 = 0.2, t = realTime, dir = RAID.dir, U = s.u + dir * RAID.front;
@@ -13524,29 +13530,132 @@ function armyUnlocks() {
   for (const u of UNLOCKS) { const f = u.req; u.req = f; }
 }
 // ---------- Einrichten des Kapitels ----------
+// v1.20: Kapitel 4 läuft jetzt auf derselben Spielmechanik wie Wiese, Wald und Regenwald (Eier legen, Kammern graben, Futter sammeln, Ausbau-Menü).
+// Wanderameisen-Eigenheiten kommen als Action obendrauf: täglicher Raubzug mit Schwarmfront, Beute antippen, Ameisenvögel, automatischer Umzug.
+const PREY_SRC = [{ n: "Grille", de: "Grille", col: [90, 70, 40] }, { n: "Kakerlake", de: "Schabe", col: [110, 60, 30] }, { n: "Spinne", de: "Jagdspinne", col: [60, 50, 44] },
+  { n: "Raupe", de: "Raupe", col: [120, 150, 60] }, { n: "Skorpion", de: "Skorpion", col: [70, 50, 30], big: 1 }];
+function spawnPreySource() {
+  const side = Math.random() < 0.5 ? -1 : 1, p = pick(PREY_SRC), amt = p.big ? 60 : Math.round(rnd(30, 46));
+  const u = clamp(EXIT_U + side * rnd(120, Math.min(1150, 300 + workers().length * 45)), WX0 + 60, W - 60);
+  sources.push({ kind: "insect", ...SRC_KINDS.insect, name: p.de, icon: "🦗", col: p.col, pn: p.n, u, v: rnd(0.15, 0.85), amount: amt, max: amt, known: false, trail: null, dots: null, trailStr: 0, carriers: [], moving: false, milk: 0 });
+}
+function drawPreyStore(c, fill) {                                                                   // Beutelager: Grillen, Schaben, Spinnen und Raupen statt Pilzgarten
+  if (fill <= 0.02) return; const n = Math.round(2 + fill * 9), r = mulberry32((c.cx * 7) | 0), kinds = ["Grille", "Kakerlake", "Spinne", "Raupe", "Grille", "Wespenbrut"];
+  ctx.save(); ctx.translate(D.x * 0.45, D.y * 0.45);
+  for (let i = 0; i < n; i++) { const x = c.cx + (r() * 1.6 - 0.8) * c.rx * 0.8, y = floorYc(c, x) - 1 - Math.floor(i / 4) * 6, k = kinds[Math.floor(r() * kinds.length)], fl = r() < 0.5 ? -1 : 1, sc = 0.8 + r() * 0.4;
+    ctx.save(); ctx.translate(x, y); ctx.scale(fl * sc * 1.9, sc * 1.9); drawPrey(0, 0, { n: k, c: [90, 70, 40], s: 1 }); ctx.restore(); }
+  ctx.restore();
+}
+function drawDeadwood(s, x, y) {                                                                    // morscher Stamm voller Käferlarven (statt Lieblingsbaum der Blattschneider)
+  ctx.save(); const g = ctx.createLinearGradient(0, y - 18, 0, y); g.addColorStop(0, "#7a5a3a"); g.addColorStop(1, "#3e2a18"); ctx.fillStyle = g;
+  ctx.beginPath(); ctx.roundRect(x - 36, y - 17, 72, 17, 8); ctx.fill(); ell(x + 36, y - 8.5, 5, 8.5, 0, "#8a6a46");
+  for (let i = 0; i < 5; i++) ell(x - 25 + i * 12, y - 9 + (i % 2) * 3, 3.4, 2.1, 0.3, "#f2e6c8");
+  ctx.fillStyle = "#5a7a34"; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.ellipse(x - 27 + i * 17, y - 17, 6, 2.2, 0, 0, 7); ctx.fill(); }
+  ctx.restore();
+}
+function drawArmyCamp() {                                                                           // über dem Eingang hängt das Biwak aus lebenden Körpern
+  if (!exitOpen()) return; const n = workers().length;
+  if (n < 4) { for (let i = 0; i < n * 3; i++) drawEci(EXIT_U + (i - n * 1.5) * 6, -1, "media", i % 2 ? 1 : -1, Math.floor(realTime * 8 + i) % 3, 0.9); return; }
+  drawBivouacAt(EXIT_U, clamp(0.12 + n / 160, 0.12, 1), false);
+}
+const ARMY_REN = [
+  ["storage", "🦗", "Beutelager", "Hier lagern Grillen, Spinnen und Käferstücke, bis die Larven sie fressen. +200 Platz.", "Prey store", "Crickets, spiders and beetle pieces are stored here until the larvae eat them. +200 space."],
+  ["storage2", "🦗", "Großes Beutelager", "Ein weiteres, großes Lager für Beute: +400 Platz.", "Large prey store", "Another, large store for prey: +400 space."],
+  ["storage3", "🦗", "Drittes Beutelager", "Große Wanderameisen-Völker erbeuten jeden Tag Zehntausende Tiere: +600 Platz.", "Third prey store", "Big army ant colonies catch tens of thousands of animals every day: +600 space."],
+  ["seeds", "🪱", "Larvenfutter-Kammer", "Weiche Beute für die jüngsten Larven: +250 Platz.", "Larva food chamber", "Soft prey for the youngest larvae: +250 space."],
+  ["forage", "⚔️", "Auf Jagd gehen", "Die Arbeiterinnen schwärmen aus, überwältigen Insekten und tragen die Beute heim. Jeden Morgen zieht außerdem ein großer Raubzug los.", "Go hunting", "The workers swarm out, overpower insects and carry the prey home. Every morning a big raid sets out as well."],
+  ["jaws", "🦷", "Hakenkiefer", "Scharfe, gebogene Kiefer: Graben und Zerlegen der Beute doppelt so schnell.", "Hooked jaws", "Sharp, curved jaws: digging and cutting up prey twice as fast."],
+  ["haul", "🏋️", "Lastträgerinnen", "Langbeinige Submajore tragen größere Beutestücke: doppelte Last pro Gang.", "Porters", "Long-legged submajors carry bigger pieces of prey: double load per trip."],
+  ["legs", "🦵", "Lange Beine", "Wanderameisen sind schnell: flinkere Schritte auf den Jagdstraßen.", "Long legs", "Army ants are fast: quicker steps on the hunting trails."],
+  ["jelly", "🐛", "Kraftfutter für Larven", "Die Larven bekommen weiche, nahrhafte Beute: Brut wächst 50 % schneller.", "Power food for larvae", "The larvae get soft, nourishing prey: brood grows 50 % faster."],
+  ["climb", "🌳", "Jagd in den Bäumen", "Die Ameisen klettern Stämme hinauf und plündern Nester in den Zweigen – große Beutequellen werden erreichbar.", "Hunting in the trees", "The ants climb up trunks and plunder nests in the branches – big prey sources come within reach."],
+  ["trails", "🛣️", "Jagdstraßen", "Spurpheromone markieren die Wege – Funde werden schneller weitergegeben.", "Hunting trails", "Trail pheromones mark the paths – finds are passed on faster."],
+  ["teamwork", "🔗", "Gemeinsam tragen", "Zwei Ameisen tragen große Beute gemeinsam – ganze Insekten werden auf einmal heimgebracht.", "Carry together", "Two ants carry big prey together – whole insects are brought home at once."],
+  ["scent", "🧭", "Breite Schwarmfront", "Die Front fächert sich weit auf – mehr Beute wird gleichzeitig entdeckt, manche Funde sind sofort bekannt.", "Wide swarm front", "The front fans out widely – more prey is found at once, some finds are known right away."],
+  ["aphids", "🪵", "Totholz mit Käferlarven", "Ein morscher Stamm voller fetter Käferlarven wird immer wieder geplündert – eine dauerhafte Beutequelle.", "Deadwood with beetle grubs", "A rotting log full of fat beetle grubs is plundered again and again – a permanent prey source."],
+  ["aphids2", "🪵", "Zweiter Totholzstamm", "Noch ein Stamm, der immer wieder Beute liefert.", "Second deadwood log", "Another log that keeps delivering prey."],
+  ["pavilion", "🛡️", "Soldatinnen als Geleit", "Soldatinnen begleiten die Trägerinnen und wehren Räuber ab – keine fallen gelassene Beute mehr.", "Soldier escort", "Soldiers escort the porters and fend off robbers – no more dropped prey."],
+  ["rootaphid", "🌳", "Lager zwischen Wurzeln", "Ein Beutelager zwischen Baumwurzeln: kühl und geschützt – die Vorräte reichen länger.", "Store between roots", "A prey store between tree roots: cool and sheltered – supplies last longer."],
+  ["warm", "🌡️", "Lebende Wärmedecke", "Die Arbeiterinnen hängen sich um die Brut und halten sie warm: Sie wächst tagsüber 40 % schneller.", "Living warm blanket", "The workers cling around the brood and keep it warm: it grows 40 % faster during the day."],
+  ["mound", "🌬️", "Luftkanäle im Biwak", "Die Ameisen lassen Lücken zwischen ihren Körpern – frische Luft strömt durch, die Brut wächst schneller.", "Air channels in the bivouac", "The ants leave gaps between their bodies – fresh air flows through and the brood grows faster."],
+  ["guards", "🗡️", "Soldatinnen mit Sichelkiefern", "Große Soldatinnen mit hakenförmigen Kiefern bewachen das Volk – gegen Räuber und Eindringlinge.", "Soldiers with sickle jaws", "Big soldiers with hook-shaped jaws guard the colony – against robbers and intruders."],
+  ["longlife", "🌿", "Abwechslungsreiche Beute", "Grillen, Spinnen, Larven – gut ernährte Arbeiterinnen leben 40 % länger.", "Varied prey", "Crickets, spiders, larvae – well-fed workers live 40 % longer."],
+  ["fertile", "👑", "Riesige Königin", "Eine Wanderameisen-Königin legt Hunderttausende Eier im Monat: Eier werden billiger.", "Giant queen", "An army ant queen lays hundreds of thousands of eggs a month: eggs get cheaper."],
+  ["guests", "🪲", "Gäste im Biwak", "Silberfischchen und kleine Käfer leben unerkannt mitten im Volk und räumen Abfälle weg – Schimmel wächst langsamer.", "Guests in the bivouac", "Silverfish and small beetles live unnoticed in the colony and clear away waste – mould grows more slowly."],
+  ["princess", "👑", "Saal der jungen Königinnen", "Hier wachsen die jungen Königinnen für die Koloniespaltung heran: 10 statt 6 Geschlechtstiere.", "Hall of the young queens", "The young queens for the colony split grow up here: 10 instead of 6 winged ants."],
+  ["refuse", "🗑️", "Abfallplatz", "Leere Beutepanzer werden weit weg vom Biwak abgelegt – so bleiben Keime fern.", "Refuse site", "Empty prey shells are dumped far from the bivouac – so germs stay away."],
+  ["sick", "🩹", "Wundpflege", "Verletzte Ameisen werden gepflegt: drei von vier genesen.", "Wound care", "Injured ants are cared for: three out of four recover."],
+  ["eggs", "🥚", "Eierkammer", "Eier liegen getrennt von Larven und Puppen: 8 Eierplätze, sie entwickeln sich schneller.", "Egg chamber", "Eggs lie apart from larvae and pupae: 8 egg places, they develop faster."],
+  ["vent", "💨", "Luftschächte", "Senkrechte Schächte lassen feuchte Luft entweichen – nasser Boden trocknet schneller ab, Schimmel wächst langsamer.", "Air shafts", "Vertical shafts let damp air escape – wet soil dries faster and mould grows more slowly."],
+  ["well", "💧", "Tiefe Feuchtkammer", "Tief unten bleibt es auch in der Trockenzeit feucht.", "Deep moist chamber", "Deep down it stays moist even in the dry season."],
+  ["alates", "🪽", "Junge Königinnen aufziehen", "Die nächsten Eier werden zu jungen Königinnen und geflügelten Männchen – die Vorbereitung auf die Koloniespaltung.", "Raise young queens", "The next eggs become young queens and winged males – getting ready for the colony split."],
+];
+function armyUnlocks2() {
+  for (const [id, icon, name, desc, en, enD] of ARMY_REN) { renR(id, icon, name, desc); try { I18N_EXACT.set(name, en); I18N_EXACT.set(desc, enD); } catch (e) {} }
+  for (const id of ["housing", "housing2", "housing3", "housing4", "housing5"]) { const u = UNLOCKS.find(u => u.id === id); if (u) u.desc = u.desc.replace("Blattschneiderinnen", "Wanderameisen"); }
+  Object.assign(CH_NAME, { storage: "Beutelager", storage2: "Großes Beutelager", storage3: "Drittes Beutelager", seeds: "Larvenfutter-Kammer", guests: "Gäste-Kammer", princess: "Saal der jungen Königinnen", rootaphid: "Lager zwischen Wurzeln" });
+}
+// ---------- automatischer Umzug: das Volk zieht nachts in ein frisches Jagdgebiet, das Spiel geht von selbst mit ----------
+const AUTOMIG = { on: false, t: 0, dir: 1, el: null, done: false };
+function refreshHunting() {
+  const s = armyState(); for (let i = 0; i < s.cells.length; i++) s.cells[i] = 0.7 + 0.3 * Math.random();
+  for (let i = sources.length - 1; i >= 0; i--) { const q = sources[i]; if (q.pn && !q.carriers.length) sources.splice(i, 1); }
+  for (let i = 0; i < 4; i++) spawnPreySource();
+}
+function autoMigTick(rdt) {
+  if (!ARMY || film || !started) return;
+  const di = dayInfo(), day = armyDay(), n = workers().length;
+  if (!AUTOMIG.on) {
+    if (speed > 0 && n >= 15 && exitOpen() && unlocked.forage && di.hour > 20.5 && di.hour < 23 && day - (colony.flags.migDay ?? 0) >= 3 && !RAID.on) {
+      Object.assign(AUTOMIG, { on: true, t: 0, simT: 0, done: false, dir: Math.random() < 0.5 ? -1 : 1 }); colony.flags.migDay = day;
+      toast(L("🌙 Aufbruch! Die Gegend ist leergejagt – in einem langen Strom tragen die Arbeiterinnen Brut und Beute zum nächsten Lagerplatz, die Königin folgt im Schutz der Soldatinnen.", "🌙 Time to move! The area has been hunted empty – in a long stream the workers carry brood and prey to the next camp, and the queen follows guarded by soldiers."));
+    }
+    return;
+  }
+  if (speed > 0) AUTOMIG.t += rdt;
+  const t = AUTOMIG.t;
+  if (t > 6.5 && !AUTOMIG.el) { const el = document.createElement("div"); el.className = "ui"; el.style.cssText = "position:fixed;inset:0;z-index:9;pointer-events:none;background:#000;opacity:0;transition:opacity 1s;display:flex;align-items:center;justify-content:center;color:#f6ecd6;font:500 22px Georgia,serif;text-shadow:0 2px 10px #000";
+    el.textContent = L("🌙 Das Volk zieht weiter …", "🌙 The colony moves on …"); document.body.appendChild(el); AUTOMIG.el = el; requestAnimationFrame(() => el.style.opacity = "0.92"); }
+  if (t > 8 && !AUTOMIG.done) { AUTOMIG.done = true; refreshHunting(); }
+  if (t > 8.6 && AUTOMIG.el && AUTOMIG.el.style.opacity !== "0") AUTOMIG.el.style.opacity = "0";
+  if (t > 10) { if (AUTOMIG.el) AUTOMIG.el.remove(); AUTOMIG.el = null; AUTOMIG.on = false;
+    toast(L("🏕️ Neues Lager im frischen Jagdgebiet – überall krabbelt wieder Beute. Dein Biwak hat sich hier neu eingerichtet.", "🏕️ New camp in fresh hunting grounds – prey is crawling everywhere again. Your bivouac has settled in here.")); }
+}
+function drawAutoMig() {
+  if (!AUTOMIG.on) return; const t = AUTOMIG.t, dir = AUTOMIG.dir, v = 0.2, x0 = EXIT_U, reach = clamp(t / 5, 0, 1) * 1500;
+  for (let i = 0; i < 200; i++) { const q = (i * 0.618 + realTime * 0.11) % 1, d = q * reach, x = x0 + dir * d + S.x * (v + Math.sin(i) * 0.012), y = S.y * (v + Math.sin(i) * 0.012);
+    drawEci(x, y, i % 19 === 0 ? "soldier" : "media", dir, Math.floor(realTime * 10 + i) % 3, 1.15); if (i % 3 === 0) ell(x + dir * 10, y - 7, 3.4, 2, 0, "#f2ead6"); }   // Larven werden mitgetragen
+  if (t > 3 && t < 6.5) { const x = x0 + dir * (t - 3) / 3.5 * 1300 + S.x * v, y = S.y * v; drawEci(x, y, "queen", dir, Math.floor(realTime * 4) % 3, 1.1); for (let i = 0; i < 12; i++) drawEci(x + (i - 6) * 12, y + Math.sin(i) * 4, "soldier", dir, Math.floor(realTime * 10 + i) % 3, 1.1); }
+}
+// ---------- Takt der Action: Raubzug nach der Uhr der Grundmechanik ----------
+function armyActionTick(dt) {
+  const s = armyState(), n = workers().length; s.u = EXIT_U; s.pop = 20000 + n * 800; s.soldiers = Math.round(s.pop * 0.04);
+  if (AUTOMIG.on) AUTOMIG.simT = (AUTOMIG.simT || 0) + dt;                                   // läuft das Spiel ohne Bild weiter, blockiert der Umzug nicht
+  const migBusy = AUTOMIG.on && AUTOMIG.simT < DAY_LEN * 0.35;
+  if (RAID.on || (unlocked.forage && n >= 3 && exitOpen() && !migBusy)) raidTick(dt);
+  for (let i = 0; i < ARMY_CELLS; i++) s.cells[i] = Math.min(1, s.cells[i] + dt / DAY_LEN * 0.05);   // die Gegend erholt sich langsam
+}
 function setupArmy() {
-  armyState();
-  if (!colony.flags.armyInit) { colony.flags.armyInit = 1; colony.food = 160; }
-  hogTick = () => {}; atmo.hog = null;
-  { const tu = drawTuft; drawTuft = function (t, bx, by) { const s = armyState(), R = bivR() * 1.15, x = s.u + S.x * 0.14; if (Math.abs(bx - x) < R && by < 4 && by > S.y * 0.14 - R) return; tu(t, bx, by); }; }   // nichts wächst durch das Biwak
-  ants.length = 0; broods.length = 0; sources.length = 0; enemies.length = 0; husks.length = 0; molds.length = 0;
-  spawnSource = () => {}; spawnLeafSource = () => {}; milestoneCheck = () => {}; playMilestone = () => {};
-  simUpdate = armyUpdate;
-  drawCrater = () => { const s = armyState(); if (MIG.on) drawBivouacAt(MIG.from, 1 - MIG.k, MIG.k < 0.6); else drawBivouacAt(s.u, 1, true); };
-  { const pa = pushAtmoDyn; pushAtmoDyn = dyn => { pa(dyn); dyn.push({ v: -1, f: () => { drawRaid(); drawMigration(); } }); }; }
-  { const dwc = drawWorldCanvas; drawWorldCanvas = function (cv) { if (cv === inner) return; if (cv !== frontS) return dwc(cv);
-      const [vx0, vy0] = toWorld(0, 0), [vx1, vy1] = toWorld(VW, VH), y0 = Math.max(0, vy0), y1 = Math.min(DEPTH, vy1); if (y1 <= y0) return;
-      const g = ctx.createLinearGradient(0, 0, 0, 400); g.addColorStop(0, "#5a2c16"); g.addColorStop(1, "#3a1a0c"); ctx.fillStyle = g; ctx.fillRect(vx0, y0, vx1 - vx0, y1 - y0); soilFill(ctx, 1); }; }
-  armyUnlocks(); buildShop();
-  const egg = $("eggBtn"); egg.onclick = () => { const s = armyState(); s.raidDir *= -1; updateRaidBtn(); sfx.ui(); }; updateRaidBtn();
-  { const uh = updateHud; updateHud = function () { uh(); const s = armyState();
-      updateRaidBtn(); $("eggBtn").disabled = !started; $("sWorkers").textContent = fmtN(s.pop); $("workChip").title = `Arbeiterinnen im Volk · davon etwa ${fmtN(s.soldiers)} Soldatinnen`;
-      $("sFood").textContent = fmtN(colony.food); $("foodChip").title = "Beute (Biomasse) – Wanderameisen lagern nichts, alles geht sofort an die Larven"; $("sFoodBar").style.width = clamp(colony.food / 500 * 100, 0, 100) + "%";
-      $("sBrood").textContent = s.phase === "stat" ? `${fmtN(s.eggs)} 🥚 · ${fmtN(s.pupae)} 🫘` : `${fmtN(s.larvae)} 🐛`; $("broodChip").title = s.phase === "stat" ? "Standphase: Eier und Puppen im Biwak" : "Wanderphase: hungrige Larven";
-      const c = $("sClock"); if (!c.textContent.includes("phase")) c.textContent += s.phase === "stat" ? ` · 🏕️ Standphase ${s.pday}/${ARMY_STAT}` : ` · 🧭 Wanderphase ${s.pday}/${ARMY_NOM}`; }; }
-  document.querySelector("#foodChip span").textContent = "🦗";
+  const s0 = armyState(); s0.u = EXIT_U; s0.phase = "nom"; s0.pday = 1;
+  unlocked.livebridge = true; unlocked.plug = true;                                                // lebende Brücken über den Bach und Lochstopfer gehören einfach dazu
+  hogTick = () => {}; atmo.hog = null; updateRaidBtn = () => {};
+  spawnSource = spawnPreySource; spawnLeafSource = spawnPreySource;
+  for (let i = sources.length - 1; i >= 0; i--) if (sources[i].kind === "leaf" || sources[i].kind === "flower") sources.splice(i, 1);
+  { const ds = drawSource; drawSource = q => { if (q.pn) { const w = srcWorld(q), k = 1.5 + 0.7 * clamp(q.amount / q.max, 0, 1); ctx.save(); ctx.translate(w.x, w.y); ctx.scale(k, k); drawPrey(0, 0, { n: q.pn, c: q.col, s: 1 }); ctx.restore(); return; } ds(q); }; }
+  pushFungus = objs => { const fill = clamp(colony.food / Math.max(1, foodCap()), 0, 1);
+    for (const id of ["storage", "storage2", "storage3", "seeds", "royal"]) { const c = id === "royal" ? royal : chambers[id]; if (!c || (id !== "royal" && !isDone(id)) || (id === "royal" && isDone("storage"))) continue; objs.push({ t: 0.4, f: () => drawPreyStore(c, id === "royal" ? fill * 0.5 : fill) }); } };
+  drawRootAphids = () => { const c = chambers.rootaphid; if (c) drawPreyStore(c, 0.7); };
+  drawAphidPlant = drawDeadwood;
+  drawCrater = drawArmyCamp;
+  { const tu = drawTuft; drawTuft = function (t, bx, by) { const R = bivR() * 1.15, x = EXIT_U + S.x * 0.14; if (exitOpen() && workers().length >= 4 && Math.abs(bx - x) < R && by < 4 && by > S.y * 0.14 - R) return; tu(t, bx, by); }; }   // nichts wächst durch das Biwak
+  { const pa = pushAtmoDyn; pushAtmoDyn = dyn => { pa(dyn); dyn.push({ v: -1, f: () => { drawRaid(); drawMigration(); drawAutoMig(); } }); }; }
+  { const su = simUpdate; simUpdate = dt => { su(dt); armyActionTick(dt); }; }
+  { const aw = animWeather; animWeather = rdt => { aw(rdt); autoMigTick(rdt); }; }
+  Object.assign(CASTE.minim, { name: "Kleine Arbeiterin (Minima)" }); Object.assign(CASTE.minor, { name: "Arbeiterin (Minor)" }); Object.assign(CASTE.media, { name: "Lastträgerin (Submajor)" }); Object.assign(CASTE.major, { name: "Soldatin mit Sichelkiefern" });
+  armyUnlocks2(); $("cards").innerHTML = ""; for (const k in cardEls) delete cardEls[k]; buildShop();
+  { const sp = document.querySelector("#foodChip span"); if (sp) sp.textContent = "🦗"; const fc = $("foodChip"); if (fc) fc.title = L("Beutelager (Nahrung)", "Prey store (food)"); }
   const h = document.querySelector("#start h1"); if (h) h.textContent = "⚔️ Kapitel 4 – Die Wanderameisen";
-  const p = document.querySelector("#start p"); if (p) p.innerHTML = "Kein Nest, keine Ruhe: Ein Volk von Wanderameisen lebt in einem Biwak aus den eigenen Körpern, überfällt jeden Tag den Waldboden und zieht nachts weiter.<br><small>Wähle einen Spielstand – drei Plätze stehen dir zur Verfügung.</small>";
+  const p = document.querySelector("#start p"); if (p) p.innerHTML = L("Nach der Koloniespaltung zieht eine junge <b>Wanderameisen-Königin</b> (Eciton burchellii) los. Aus ihr soll ein Volk werden, das jeden Morgen mit einer breiten Schwarmfront den Regenwaldboden durchkämmt.", "After a colony split a young <b>army ant queen</b> (Eciton burchellii) sets out. She is to become a colony that sweeps the rainforest floor with a wide swarm front every morning.");
   document.title = "Ameisen-Tycoon – Kapitel 4: Die Wanderameisen";
 }
 function armyTip() {
@@ -13632,8 +13741,8 @@ function raidEventsTick(dt) {
   if (!RAID.on) { RAIDEV.length = 0; return; }
   const s = armyState(), U = s.u + RAID.dir * RAID.front;
   if (!RAID.evChecked && !RAID.tgtEv && RAID.front > RAID.len * 0.55) { RAID.evChecked = true;
-    if (unlocked.wasps && Math.random() < 0.55) RAIDEV.push({ type: "wasp", u: U + RAID.dir * 20, v: 0.22, t: 0, n: 0 });
-    else if (unlocked.antnest && Math.random() < 0.55) RAIDEV.push({ type: "ants", u: U + RAID.dir * 20, v: 0.16, t: 0, n: 0 }); }
+    if ((unlocked.wasps || ARMY) && Math.random() < 0.3) RAIDEV.push({ type: "wasp", u: U + RAID.dir * 20, v: 0.22, t: 0, n: 0 });
+    else if ((unlocked.antnest || ARMY) && Math.random() < 0.45) RAIDEV.push({ type: "ants", u: U + RAID.dir * 20, v: 0.16, t: 0, n: 0 }); }
   for (const e of RAIDEV) { e.t += dt;
     if (e.type === "termite") termiteEvTick(e, s, dt);
     else if (e.type === "wasp") {
@@ -13685,7 +13794,7 @@ function drawPlugs() {                                                          
 }
 function millTick(dt) {
   const s = armyState();
-  if (RAID.on && colony.rain && !AMILL.on && !RAID.millChecked && RAID.front > 150) { RAID.millChecked = true;
+  if (false && RAID.on && colony.rain && !AMILL.on && !RAID.millChecked && RAID.front > 150) { RAID.millChecked = true;
     if (Math.random() < 0.45) { Object.assign(AMILL, { on: true, u: s.u + RAID.dir * RAID.front * rnd(0.35, 0.75), t: 0, group: Math.round(s.pop * rnd(0.008, 0.02)), lost: 0 });
       toast("🌀 Der Regen hat die Duftspur weggewaschen! Ein abgeschnittener Trupp folgt nur noch der Ameise vor sich – und läuft im Kreis. Eine Ameisenmühle: Sie laufen, bis sie vor Erschöpfung sterben."); } }
   if (!AMILL.on) return;
@@ -13707,7 +13816,8 @@ function drawMill() {
       if (d > 0 && d < RAID.len) { if (!unlocked.livebridge) { RAID.len = Math.max(60, d - creekW() - 24); if (!colony.flags.creekStop) { colony.flags.creekStop = 1; toast("🌊 Der Bach stoppt die Schwarmfront – kein Durchkommen. Mit der Anpassung „Lebende Brücken“ überwinden die Ameisen ihn aus eigener Kraft."); } }
         else if (!colony.flags.lbSeen) { colony.flags.lbSeen = 1; toast("🌉 Am Bach verhaken sich Hunderte Ameisen mit ihren Fußkrallen zu einer lebenden Brücke – der Schwarm rennt über ihre Körper hinweg ans andere Ufer."); } } }
     millTick(dt);
-    if (colony.food > 900) { colony.food -= (colony.food - 900) * dt / DAY_LEN * 1.5; if (!colony.flags.rotSeen) { colony.flags.rotSeen = 1; toast("🦗 Wanderameisen legen keine Vorräte an: Was die Larven nicht sofort fressen, verdirbt in der feuchten Wärme."); } } };
+    // v1.20: kein Verderben mehr – die Beute liegt im Beutelager
+  };
   const _dr3 = drawRaid; drawRaid = function () { const s = armyState(); if (RAID.on) { if (unlocked.plug) drawPlugs(); if (unlocked.livebridge && crossesCreek(s.u, s.u + RAID.dir * RAID.front)) drawLiveBridge(); } _dr3(); };
   const _dm3 = drawMigration; drawMigration = function () { if (MIG.on && unlocked.livebridge && crossesCreek(MIG.from, MIG.to)) drawLiveBridge(); drawMill(); _dm3(); };
   const _mt3 = migrationTick; migrationTick = function (dt) { const was = MIG.on; _mt3(dt); if (!was && MIG.on) { const s = armyState(), uc = armyCreekU(), fix = to => clamp(to, WX0 + 260, W - 260);
@@ -14008,7 +14118,7 @@ function drawTrail() {
 // ---------- 5) Koloniespaltung: das große Ziel von Kapitel 4 ----------
 let splitCard = null;
 function updateSplitCard() {
-  if (!ARMY) return; const s = armyState(), can = s.pop >= ARMY_SPLIT, show = can || (s.splits || 0) > 0;
+  if (true) return; const s = armyState(), can = s.pop >= ARMY_SPLIT, show = can || (s.splits || 0) > 0;   // v1.20: das Finale läuft über die Karte „Die Koloniespaltung“
   if (!show) { if (splitCard) { splitCard.remove(); splitCard = null; } return; }
   if (!splitCard) { splitCard = document.createElement("div"); splitCard.className = "card buy flightCard"; $("cards").prepend(splitCard); }
   const key = can + "|" + (s.splits || 0) + "|" + LANG_KEY(); if (splitCard._k === key) return; splitCard._k = key;
@@ -14056,8 +14166,8 @@ function endSplitFilm() {
   f.box.remove(); document.body.classList.remove("filmMode"); film = null;
   cam.x = f.camBefore.x; cam.y = f.camBefore.y; cam.zoom = f.camBefore.zoom; clampCam();
   try { if (ac) fade(musicBus, audioOn.music); } catch (e) {} setSpeed(f.spBefore || 1);
-  if (!f.rewatch) { const s = armyState(), half = Math.round(s.pop / 2); s.pop -= half; s.soldiers = Math.round(s.soldiers / 2); s.splits = (s.splits || 0) + 1; s.splitHint = 0;
-    toast(L(`👑 Geschafft – Kapitel 4 ist gemeistert! ${fmtN(half)} Arbeiterinnen ziehen mit der jungen Königin davon, dein Volk lebt mit der alten Königin weiter. Wächst es wieder auf ${fmtN(ARMY_SPLIT)}, teilt es sich erneut.`, `👑 Done – chapter 4 is mastered! ${fmtN(half)} workers leave with the young queen, your colony lives on with the old queen. If it grows to ${fmtN(ARMY_SPLIT)} again, it will split once more.`));
+  if (!f.rewatch) { colony.flags.split4 = (colony.flags.split4 || 0) + 1; if (flightCard) { flightCard.remove(); flightCard = null; }
+    toast(L("👑 Geschafft – Kapitel 4 ist gemeistert! Eine junge Königin ist mit der Hälfte der Arbeiterinnen losgezogen, dein Volk lebt mit der alten Königin weiter. Das Buch der Ameisen ist zu Ende erzählt.", "👑 Done – chapter 4 is mastered! A young queen has set out with half of the workers, your colony lives on with the old queen. The book of the ants has been told to the end."));
     updateShop(); try { save(); } catch (e) {} }
 }
 { const ft = filmTick; filmTick = function (rdt) { if (film && film.part === "AF") { film.t += rdt; filmTickAF(rdt, film.t); clampCam(); return; } ft(rdt); }; }
@@ -14067,11 +14177,7 @@ function endSplitFilm() {
 { const aw = animWeather; animWeather = function (rdt) { aw(rdt); if (!ARMY) return; catchTick(rdt); millRealTick(rdt); siteTick(rdt);
     for (let i = AX.fx.length - 1; i >= 0; i--) if ((AX.fx[i].t += rdt) > 1.4) AX.fx.splice(i, 1);
     if (AX.rescue && (AX.rescue.t += rdt) > 9) AX.rescue = null; }; }
-{ const sa = setupArmy; setupArmy = function () { sa();
-    const s = armyState(); if (!s.targets || !s.targets.length) { s.targets = []; for (let i = 0; i < 3; i++) spawnTarget(); s.tgtDay = armyDay(); }
-    $("eggBtn").onclick = () => { const s2 = armyState(); if (s2.tgt) s2.tgt = null; else { s2.raidDir *= -1; const auto = preyAhead(1) >= preyAhead(-1) ? 1 : -1; s2.manual = s2.raidDir !== auto;
-        if (s2.manual && !colony.flags.manualHint) { colony.flags.manualHint = 1; toast(L("✋ Du hast die Richtung selbst gewählt. Nach dem nächsten Raubzug entscheiden die Ameisen wieder allein, wo sie jagen.", "✋ You picked the direction yourself. After the next raid the ants decide on their own again where to hunt.")); } }
-      updateRaidBtn(); try { sfx.ui(); } catch (e) {} }; updateRaidBtn(); }; }
+// v1.20: Der Ei-Knopf legt in Kapitel 4 wieder Eier wie in den anderen Kapiteln
 
 // =====================================================================
 //  v0.82 Schaukel: Brett und Seile schwingen als Einheit, das Mädchen sitzt darauf, greift die Seile und holt richtig Schwung
@@ -14179,7 +14285,7 @@ function chamberStatus(c) {
     _ht(); const tip = $("tip"); tip.style.whiteSpace = "";
     if (tip.style.display === "block" || !mouse || drag || film) return;
     const [wx, wy] = toWorld(mouse.x, mouse.y);
-    if (ARMY) {                                                                                   // Wanderameisen: das Biwak
+    if (false) {                                                                                  // (alt) Wanderameisen: das Biwak
       const s = armyState(), R = bivR(), x = s.u + S.x * 0.14, y = S.y * 0.14;
       if (Math.abs(wx - x) < R && wy < y + 6 && wy > y - R * 1.15) { tip.style.whiteSpace = "pre-line";
         tip.textContent = `⚔️ Biwak – ein lebendes Nest aus den Körpern von ${fmtN(s.pop)} Arbeiterinnen\n${s.phase === "stat" ? `🏕️ Standphase ${s.pday}/${ARMY_STAT}: ${fmtN(s.eggs)} Eier, ${fmtN(s.pupae)} Puppen` : `🧭 Wanderphase ${s.pday}/${ARMY_NOM}: ${fmtN(s.larvae)} hungrige Larven – heute Nacht wird umgezogen`}\n👑 Innen sitzt die Königin, umgeben von der Brut`;
@@ -15894,12 +16000,11 @@ function armyGuide(open) {
   let o = $("armyGuide"); if (!open) { if (o) { o.remove(); setSpeed(armyGuide.sp || 1); } return; }
   if (o) return; armyGuide.sp = speed || 1; setSpeed(0);
   const st = [
-    ["👑", L("<b>Hier legst du keine Eier.</b> Die Königin legt von selbst – in der Standphase Zehntausende auf einmal. Dein Volk wächst durch <b>Beute</b>.", "<b>You don't lay eggs here.</b> The queen lays them on her own – tens of thousands at once in the stationary phase. Your colony grows through <b>prey</b>.")],
-    ["⚔️", L("<b>Jeden Morgen zieht ein Raubzug los – ganz von selbst.</b> Die Ameisen jagen dort, wo die meiste Beute lebt, und bringen sie heim. Die 🦗 auf dem orangen Knopf zeigen, wie viel Beute dort lebt. Willst du selbst bestimmen, tippst du ihn an (✋) – nach dem Raubzug entscheiden die Ameisen wieder allein.", "<b>Every morning a raid sets out – all by itself.</b> The ants hunt where most prey lives and bring it home. The 🦗 on the orange button show how much prey is there. If you want to decide yourself, tap it (✋) – after the raid the ants decide on their own again.")],
-    ["🐛", L("<b>Beute wird zu Nachwuchs:</b> Sie füttert die Larven, aus ihnen schlüpfen neue Arbeiterinnen. Gesammelte Beute 🦗 gibst du im Ausbau-Menü für <b>Anpassungen</b> aus.", "<b>Prey becomes offspring:</b> it feeds the larvae, and new workers hatch from them. You spend collected prey 🦗 on <b>adaptations</b> in the upgrade menu.")],
-    ["🔁", L(`<b>Der Rhythmus:</b> 🏕️ <b>Standphase</b> (${ARMY_STAT} Tage) – das Biwak bleibt, Eier und Puppen reifen. 🧭 <b>Wanderphase</b> (${ARMY_NOM} Tage) – jede Nacht zieht das Volk um, und du wählst den neuen Biwakplatz. Oben bei der Uhr siehst du, welche Phase gerade läuft.`, `<b>The rhythm:</b> 🏕️ <b>stationary phase</b> (${ARMY_STAT} days) – the bivouac stays put while eggs and pupae mature. 🧭 <b>Nomadic phase</b> (${ARMY_NOM} days) – the colony moves every night and you choose the new bivouac site. The clock at the top shows the current phase.`)],
-    ["👆", L("<b>Mitmachen:</b> Fliehende Tiere vor der Schwarmfront antippen. Termitenhügel, fremde Ameisen- und Wespennester als 🎯 Ziel antippen. Läuft ein Trupp im Kreis, ziehst du mit dem Finger eine Spur zum Biwak.", "<b>Join in:</b> tap fleeing animals ahead of the swarm front. Tap termite mounds, rival ant nests and wasp nests to make them a 🎯 target. If a squad runs in circles, drag a trail to the bivouac with your finger.")],
-    ["🏆", L(`<b>Ziel:</b> ${fmtN(ARMY_SPLIT)} Arbeiterinnen – dann teilt sich dein Volk. Der 💡 Tipp oben links sagt dir immer, was gerade zu tun ist.`, `<b>Goal:</b> ${fmtN(ARMY_SPLIT)} workers – then your colony splits. The 💡 tip at the top left always tells you what to do next.`)],
+    ["👑", L("<b>Wie in den anderen Kapiteln:</b> Die Königin legt Eier, aus den Larven schlüpfen Arbeiterinnen. Im Ausbau-Menü gräbst du Kammern und machst dein Volk stärker.", "<b>Just like the other chapters:</b> the queen lays eggs and workers hatch from the larvae. In the upgrade menu you dig chambers and make your colony stronger.")],
+    ["🦗", L("<b>Futter holen die Ameisen von selbst:</b> Sobald „Auf Jagd gehen“ freigeschaltet ist, überwältigen deine Jägerinnen Grillen, Spinnen und Käfer und tragen sie ins Beutelager.", "<b>The ants fetch food on their own:</b> once “Go hunting” is unlocked, your hunters overpower crickets, spiders and beetles and carry them to the prey store.")],
+    ["⚔️", L("<b>Extra-Action:</b> Jeden Morgen zieht ein großer Raubzug mit breiter Schwarmfront los. Tippe die fliehenden Tiere an – das bringt Extra-Beute. Manchmal plündert die Front ein Wespen- oder Ameisennest.", "<b>Extra action:</b> every morning a big raid with a wide swarm front sets out. Tap the fleeing animals – that brings extra prey. Sometimes the front plunders a wasp or ant nest.")],
+    ["🌙", L("<b>Wanderameisen wandern:</b> Ab und zu zieht das Volk nachts in ein frisches Jagdgebiet weiter. Das geschieht ganz von selbst – das Spiel geht einfach mit.", "<b>Army ants wander:</b> every now and then the colony moves on to fresh hunting grounds at night. It happens all by itself – the game simply goes along.")],
+    ["🏆", L("<b>Ziel:</b> Ist alles ausgebaut, teilt sich dein Volk – das große Finale mit eigenem Film. Der 💡 Tipp oben links sagt dir immer, was als Nächstes dran ist.", "<b>Goal:</b> once everything is built, your colony splits – the grand finale with its own film. The 💡 tip at the top left always tells you what to do next.")],
   ];
   o = document.createElement("div"); o.id = "armyGuide"; o.className = "ui"; o.setAttribute("data-notr", "1");
   o.innerHTML = `<div class="ag glass"><h2>${L("⚔️ So lenkst du dein Wanderameisen-Volk", "⚔️ How to lead your army ant colony")}</h2><p class="sub">${L("Wanderameisen haben kein Nest – sie leben in einem Biwak aus ihren eigenen Körpern und jagen jeden Tag.", "Army ants have no nest – they live in a bivouac made of their own bodies and hunt every day.")}</p>`
@@ -15930,7 +16035,7 @@ $("startBtn").onclick = () => {
   try { audioInit(); } catch (err) { console.warn("Audio nicht verfügbar", err); }
   $("start").remove(); started = true; setSpeed(1);
   hudTimer = 0;
-  if (ARMY) { setTimeout(() => toast(hadSave ? "💾 Spielstand geladen – willkommen zurück!" : L("⚔️ Ein junges Wanderameisen-Volk hängt als lebender Ball unter einem umgestürzten Stamm: 62.000 blinde Arbeiterinnen, eine riesige Königin – und in zwei Tagen schlüpfen über 30.000 junge Arbeiterinnen aus ihren Puppen.", "⚔️ A young army ant colony hangs as a living ball under a fallen log: 62,000 blind workers, a giant queen – and in two days more than 30,000 young workers will hatch from their pupae.")), 400); return; }
+  if (ARMY) { setTimeout(() => toast(hadSave ? "💾 Spielstand geladen – willkommen zurück!" : L("⚔️ Nach der Koloniespaltung zieht eine junge Wanderameisen-Königin los, um ein eigenes Volk zu gründen. Lass sie ihr erstes Ei legen!", "⚔️ After the colony split a young army ant queen sets out to found her own colony. Let her lay her first egg!")), 400); return; }
   if (location.hash === "#film" && !WALD && !REGEN) setTimeout(() => playFlightFilm(true), 300);      // Film zum Ansehen: Adresse mit #film öffnen
   if (WALD && FILM2) setTimeout(() => playForestFilm(FILM2.preview), 250);
   if (REGEN && (FILM3 || !hadSave)) setTimeout(() => playRegenArrival(!!(FILM3 && FILM3.preview)), 250);
@@ -15942,7 +16047,7 @@ $("startBtn").onclick = () => {
 // =====================================================================
 //  v0.75 Drei Speicherstände: laden, hierhin speichern (überschreiben), neu beginnen, löschen
 // =====================================================================
-const SLOT_STORE = ["ameisen-tycoon-save-v4", "ameisen-tycoon-save-v4-wald", "ameisen-tycoon-save-v4-regen", "ameisen-tycoon-save-v4-schwarm", "ameisenBuch", "ameisenKapitel", "ameisenSlotMeta", "ameisenSlotThumb"];
+const SLOT_STORE = ["ameisen-tycoon-save-v4", "ameisen-tycoon-save-v4-wald", "ameisen-tycoon-save-v4-regen", "ameisen-tycoon-save-v4-schwarm2", "ameisenBuch", "ameisenKapitel", "ameisenSlotMeta", "ameisenSlotThumb"];
 const SLOT_SEAS = { schwarm: ["Kleine Regenzeit", "Hohe Regenzeit", "Übergangszeit", "Trockenzeit"], wiese: ["Frühling", "Sommer", "Herbst", "Winter"], wald: ["Frühling", "Sommer", "Herbst", "Winter"], regen: ["Kleine Regenzeit", "Hohe Regenzeit", "Übergangszeit", "Trockenzeit"] };
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); return true; } catch (e) { return false; } };
@@ -15951,7 +16056,7 @@ function slotInfo(n) {
   if (!slotHas(n)) return null;
   let m = null; try { m = JSON.parse(lsGet(SK("ameisenSlotMeta", n)) || "null"); } catch (e) {}
   const ch = lsGet(SK("ameisenKapitel", n)) || (m && m.ch) || "wiese";
-  let d = null; try { d = JSON.parse(lsGet(SK("ameisen-tycoon-save-v4" + (ch === "wald" ? "-wald" : ch === "regen" ? "-regen" : ch === "schwarm" ? "-schwarm" : ""), n)) || "null"); } catch (e) {}
+  let d = null; try { d = JSON.parse(lsGet(SK("ameisen-tycoon-save-v4" + (ch === "wald" ? "-wald" : ch === "regen" ? "-regen" : ch === "schwarm" ? "-schwarm2" : ""), n)) || "null"); } catch (e) {}
   const st = d ? d.simTime : m ? m.simTime : 0, dd = st / DAY_LEN + 0.25, sd = dd / SEASON_DAYS;
   let book = null; try { book = JSON.parse(lsGet(SK("ameisenBuch", n)) || "null"); } catch (e) {}
   return { ch, t: m && m.t, year: Math.floor(sd / 4) + 1, season: (SLOT_SEAS[ch] || SLOT_SEAS.wiese)[Math.floor(sd) % 4], day: Math.floor(dd) + 1,
@@ -16073,7 +16178,7 @@ $("resetBtn").onclick = () => { if (!confirm(L(`Spielstand ${SLOT} wirklich lös
 // =====================================================================
 //  v1.18 Jedes Kapitel lässt sich einzeln neu beginnen – die anderen Kapitel, das Buch und die übrigen Spielstände bleiben erhalten
 // =====================================================================
-const CH_SAVE = ch => "ameisen-tycoon-save-v4" + (ch === "wald" ? "-wald" : ch === "regen" ? "-regen" : ch === "schwarm" ? "-schwarm" : "");
+const CH_SAVE = ch => "ameisen-tycoon-save-v4" + (ch === "wald" ? "-wald" : ch === "regen" ? "-regen" : ch === "schwarm" ? "-schwarm2" : "");
 const CH_ICON4 = { wiese: "🌾", wald: "🌲", regen: "🌴", schwarm: "⚔️" };
 (() => { const st = document.createElement("style"); st.textContent = `
   #chapModal { position: fixed; inset: 0; z-index: 25; display: none; align-items: center; justify-content: center; background: rgba(10,6,3,.55); backdrop-filter: blur(6px); }
