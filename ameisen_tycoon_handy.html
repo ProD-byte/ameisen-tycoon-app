@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#120c07"><meta name="format-detection" content="telephone=no">
-<script id="apkUpd0">(function(){var OWN=116;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
+<script id="apkUpd0">(function(){var OWN=117;window.__OWNV=OWN;var R=window.RTApp;if(!R)return;
 try{var v=R.ver();if(v>OWN){var n=+(localStorage.getItem('at_ub')||0);if(n>=3){R.clear();localStorage.setItem('at_ub','0');}
 else{localStorage.setItem('at_ub',String(n+1));R.boot();window.stop();}}else if(v&&v<OWN)R.clear();}catch(e){}})();</script>
 <title>Ameisen-Simulator</title>
@@ -43,6 +43,13 @@ else{localStorage.setItem('at_ub',String(n+1));R.boot();window.stop();}}else if(
   #barMore.open ~ #tipBox { display: none; }
 
   /* Steuerleiste unten */
+  #armyGuide { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: rgba(8,5,2,.55); padding: 16px; }
+  #armyGuide .ag { max-width: 560px; width: 100%; max-height: calc(100vh - 32px); overflow-y: auto; border-radius: 18px; padding: 18px 20px 16px; background: var(--glass2); color: var(--txt); font-size: 14px; line-height: 1.45; }
+  #armyGuide h2 { margin: 0 0 4px; font-size: 19px; } #armyGuide .sub { color: var(--dim); margin: 0 0 12px; font-size: 13px; }
+  #armyGuide .st { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--line); }
+  #armyGuide .st .i { font-size: 24px; width: 34px; text-align: center; flex: none; } #armyGuide .st b { color: var(--acc); }
+  #armyGuide .go { margin-top: 12px; width: 100%; padding: 10px; border: 0; border-radius: 11px; font-weight: 700; font-size: 15px; cursor: pointer; color: #24160a; background: linear-gradient(180deg, #f2b65c, #d9822b); }
+  #helpBtn { font-weight: 700; }
   #dock { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); border-radius: 16px; padding: 5px; display: flex; gap: 4px; align-items: center; }
   body.idle #dock { transform: translateX(-50%) translateY(20px); }
   @media (min-width: 1000px) { body.shopOpen #dock, body.shopOpen #eggReason, body.shopOpen #toasts { left: calc((100vw - 320px) / 2); } }
@@ -224,7 +231,7 @@ const WALD = CHAPTER === "wald", ARMY = CHAPTER === "schwarm", REGEN = CHAPTER =
 // =====================================================================
 //  Ameisen-Tycoon – 2,5D-Querschnitt durch den Ameisenbau
 // =====================================================================
-const VERSION = "v1.16";
+const VERSION = "v1.17";
 const UPDATES = [
   ["v0.1", "Prototyp: eine Ameise sucht Futter an der Oberfläche."],
   ["v0.2", "Blick in den Bau: Königin, Eier, Larven, Puppen und Arbeiterinnen. Musik und Höhlen-Geräusche."],
@@ -343,6 +350,7 @@ const UPDATES = [
   ["v1.14", "Kapitel 4 läuft viel flüssiger: Das Biwak wurde beim nächtlichen Umzug in Dutzenden Zwischengrößen neu gezeichnet (jedes Mal bis zu 150 ms Standbild) und füllte dabei den Grafikspeicher. Jetzt wird es nur einmal gemalt und skaliert, und die Ameisenkörper im Querschnitt kommen aus einem fertigen Bild statt 1.600 Einzelzeichnungen pro Frame – bei gleichem Aussehen. Außerdem hat Kapitel 4 eigene Tipps: Sie zeigen Raubzug, Umzug und Standphase, sagen, wann eine Anpassung bezahlbar ist, und raten zum Richtungswechsel, wenn die Gegend leergefressen ist (vorher stand dort „Lass die Königin ihr erstes Ei legen!“)."],
   ["v1.15", "Kapitel 4: Der Raubzug-Knopf zeigt jetzt, wie viel Beute in der gewählten Richtung noch liegt (🦗🦗🦗 viel, 🦗🦗 etwas, 🦗 kaum) – so lohnt sich die Wahl zwischen links und rechts. Tipps zeigen während Raubzug und Standphase, wann wie viele neue Arbeiterinnen schlüpfen; die täglichen Verluste werden so vom Nachwuchs sichtbar mehr als ausgeglichen. Ein neues Wanderameisen-Volk startet kurz vor dem ersten Schlupf, statt erst eine Woche lang nur Ameisen zu verlieren."],
   ["v1.16", "Kapitel 4 zum Mitmachen: 👆 Fliehende Grillen, Schaben und Spinnen vor der Schwarmfront antippen – dann schnappen die Soldatinnen sie (sonst holt sie ein Ameisenvogel). 🎯 Auf dem Waldboden liegen Ziele – Termitenhügel, fremde Ameisennester und Wespennester; antippen, Beute und Verluste abwägen und zum Ziel des nächsten Raubzugs machen. 🌙 Jeden Abend der Wanderphase wählst du den Biwakplatz: gleich nebenan (ungeschützt bei Regen), zwischen Brettwurzeln oder im hohlen Baumstamm weit im frischen Jagdgebiet (langer Weg). 🌀 Läuft ein Trupp in der Ameisenmühle im Kreis, ziehst du mit dem Finger eine neue Duftspur zum Biwak und rettest ihn. 👑 Und Kapitel 4 hat ein Ziel: Ab 250.000 Arbeiterinnen teilt sich das Volk – mit eigenem Film."],
+  ["v1.17", "Kapitel 4 erklärt sich jetzt selbst: Beim ersten Start zeigt eine kurze Anleitung, wie du dein Wanderameisen-Volk lenkst – keine Eier legen, Raubzug-Richtung wählen, Beute wird zu Nachwuchs, Stand- und Wanderphase, Mitmachen und das große Ziel. Über den neuen ❓-Knopf neben dem Raubzug-Knopf lässt sie sich jederzeit wieder öffnen; solange sie offen ist, pausiert das Spiel."],
 ];
 const SAVE_KEY = SK("ameisen-tycoon-save-v4" + (WALD ? "-wald" : ARMY ? "-schwarm" : REGEN ? "-regen" : ""));
 
@@ -15871,6 +15879,33 @@ if (WALD) {
 if (REGEN) { setupRegen(); const df = drawFilmActors; drawFilmActors = () => { df(); drawMotherNest(); }; drawFlyerLite = a => drawAtta({ ...a, x: a.x + (a._ox || 0), y: a.y + (a._oy || 0) }); const px2 = pushXtraObjs; pushXtraObjs = o => { px2(o); o.push({ t: 0.5, f: drawFoundingPellet }); }; }
 if (REGEN) hogTick = () => {};                                                                 // kein Igel im Regenwald
 if (ARMY) setupArmy();
+
+// =====================================================================
+//  v1.17: Kapitel 4 erklärt sich selbst – kurze Anleitung beim ersten Mal, danach jederzeit über ❓ im Dock
+// =====================================================================
+function armyGuide(open) {
+  let o = $("armyGuide"); if (!open) { if (o) { o.remove(); setSpeed(armyGuide.sp || 1); } return; }
+  if (o) return; armyGuide.sp = speed || 1; setSpeed(0);
+  const st = [
+    ["👑", L("<b>Hier legst du keine Eier.</b> Die Königin legt von selbst – in der Standphase Zehntausende auf einmal. Dein Volk wächst durch <b>Beute</b>.", "<b>You don't lay eggs here.</b> The queen lays them on her own – tens of thousands at once in the stationary phase. Your colony grows through <b>prey</b>.")],
+    ["⚔️", L("<b>Jeden Tag zieht ein Raubzug los.</b> Mit dem orangen Knopf unten wählst du die Richtung – links oder rechts. Die 🦗 auf dem Knopf zeigen, wie viel Beute dort noch lebt. Leergejagte Gegenden erholen sich erst nach Tagen.", "<b>A raid sets out every day.</b> The orange button below picks the direction – left or right. The 🦗 on the button show how much prey is still there. Areas you have emptied take days to recover.")],
+    ["🐛", L("<b>Beute wird zu Nachwuchs:</b> Sie füttert die Larven, aus ihnen schlüpfen neue Arbeiterinnen. Gesammelte Beute 🦗 gibst du im Ausbau-Menü für <b>Anpassungen</b> aus.", "<b>Prey becomes offspring:</b> it feeds the larvae, and new workers hatch from them. You spend collected prey 🦗 on <b>adaptations</b> in the upgrade menu.")],
+    ["🔁", L(`<b>Der Rhythmus:</b> 🏕️ <b>Standphase</b> (${ARMY_STAT} Tage) – das Biwak bleibt, Eier und Puppen reifen. 🧭 <b>Wanderphase</b> (${ARMY_NOM} Tage) – jede Nacht zieht das Volk um, und du wählst den neuen Biwakplatz. Oben bei der Uhr siehst du, welche Phase gerade läuft.`, `<b>The rhythm:</b> 🏕️ <b>stationary phase</b> (${ARMY_STAT} days) – the bivouac stays put while eggs and pupae mature. 🧭 <b>Nomadic phase</b> (${ARMY_NOM} days) – the colony moves every night and you choose the new bivouac site. The clock at the top shows the current phase.`)],
+    ["👆", L("<b>Mitmachen:</b> Fliehende Tiere vor der Schwarmfront antippen. Termitenhügel, fremde Ameisen- und Wespennester als 🎯 Ziel antippen. Läuft ein Trupp im Kreis, ziehst du mit dem Finger eine Spur zum Biwak.", "<b>Join in:</b> tap fleeing animals ahead of the swarm front. Tap termite mounds, rival ant nests and wasp nests to make them a 🎯 target. If a squad runs in circles, drag a trail to the bivouac with your finger.")],
+    ["🏆", L(`<b>Ziel:</b> ${fmtN(ARMY_SPLIT)} Arbeiterinnen – dann teilt sich dein Volk. Der 💡 Tipp oben links sagt dir immer, was gerade zu tun ist.`, `<b>Goal:</b> ${fmtN(ARMY_SPLIT)} workers – then your colony splits. The 💡 tip at the top left always tells you what to do next.`)],
+  ];
+  o = document.createElement("div"); o.id = "armyGuide"; o.className = "ui"; o.setAttribute("data-notr", "1");
+  o.innerHTML = `<div class="ag glass"><h2>${L("⚔️ So lenkst du dein Wanderameisen-Volk", "⚔️ How to lead your army ant colony")}</h2><p class="sub">${L("Wanderameisen haben kein Nest – sie leben in einem Biwak aus ihren eigenen Körpern und jagen jeden Tag.", "Army ants have no nest – they live in a bivouac made of their own bodies and hunt every day.")}</p>`
+    + st.map(([i, t]) => `<div class="st"><div class="i">${i}</div><div>${t}</div></div>`).join("") + `<button class="go">${L("Los geht's", "Let's go")}</button></div>`;
+  o.querySelector(".go").onclick = e => { e.stopPropagation(); armyGuide(false); };
+  o.onclick = e => { if (e.target === o) armyGuide(false); };
+  document.body.appendChild(o);
+}
+if (ARMY) {
+  const hb = document.createElement("button"); hb.id = "helpBtn"; hb.textContent = "❓"; hb.title = L("So funktioniert Kapitel 4", "How chapter 4 works");
+  hb.onclick = e => { e.stopPropagation(); armyGuide(true); }; $("eggBtn").after(hb);
+  $("startBtn").addEventListener("click", () => { if (!colony.flags.armyGuide) setTimeout(() => { if (film) return; colony.flags.armyGuide = 1; armyGuide(true); }, 1600); });
+}
 if (WALD) {
   setupForest(); setupForestRules();
   updateScenery = dt => { forestTick(dt); forestLifeTick(dt); };
